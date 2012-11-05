@@ -1,0 +1,73 @@
+current JDK8 Class/Field/Method/Constructor/Executable:
+
+warm-up:
+Test1:   1 concurrent threads *    100000 loops each:       7,918.986 ms
+Test1:   1 concurrent threads *    100000 loops each:       7,371.922 ms (x   0.93)
+Test1:   1 concurrent threads *    100000 loops each:       7,370.244 ms (x   1.00)
+
+Test2:   1 concurrent threads *    100000 loops each:       1,150.685 ms
+Test2:   1 concurrent threads *    100000 loops each:       1,073.679 ms (x   0.93)
+Test2:   1 concurrent threads *    100000 loops each:       1,065.130 ms (x   0.99)
+
+Test3:   1 concurrent threads *  10000000 loops each:       2,025.967 ms
+Test3:   1 concurrent threads *  10000000 loops each:       2,019.092 ms (x   1.00)
+Test3:   1 concurrent threads *  10000000 loops each:       2,013.647 ms (x   1.00)
+
+measure:
+Test1:   1 concurrent threads *    100000 loops each:       7,290.421 ms
+Test1:   2 concurrent threads *    100000 loops each:       7,465.870 ms (x   1.02)
+Test1:   4 concurrent threads *    100000 loops each:       7,717.629 ms (x   1.03)
+Test1:   8 concurrent threads *    100000 loops each:      13,712.065 ms (x   1.78)
+Test1:  32 concurrent threads *    100000 loops each:      54,791.329 ms (x   4.00)
+Test1: 128 concurrent threads *    100000 loops each:     220,675.103 ms (x   4.03)
+
+Test2:   1 concurrent threads *    100000 loops each:       1,072.986 ms
+Test2:   2 concurrent threads *    100000 loops each:       1,109.035 ms (x   1.03)
+Test2:   4 concurrent threads *    100000 loops each:       1,378.384 ms (x   1.24)
+Test2:   8 concurrent threads *    100000 loops each:       2,808.653 ms (x   2.04)
+Test2:  32 concurrent threads *    100000 loops each:      11,420.405 ms (x   4.07)
+Test2: 128 concurrent threads *    100000 loops each:      45,744.976 ms (x   4.01)
+
+Test3:   1 concurrent threads *  10000000 loops each:       2,020.678 ms
+Test3:   2 concurrent threads *  10000000 loops each:       2,310.773 ms (x   1.14)
+Test3:   4 concurrent threads *  10000000 loops each:       2,955.300 ms (x   1.28)
+Test3:   8 concurrent threads *  10000000 loops each:      23,585.794 ms (x   7.98)
+Test3:  32 concurrent threads *  10000000 loops each:      30,947.768 ms (x   1.31)
+Test3: 128 concurrent threads *  10000000 loops each:     128,051.150 ms (x   4.14)
+
+modified Class/Field/Method/Constructor/Executable:
+
+warm-up:
+Test1:   1 concurrent threads *    100000 loops each:       2,649.407 ms
+Test1:   1 concurrent threads *    100000 loops each:       1,997.154 ms (x   0.75)
+Test1:   1 concurrent threads *    100000 loops each:       1,957.589 ms (x   0.98)
+
+Test2:   1 concurrent threads *    100000 loops each:       1,132.727 ms
+Test2:   1 concurrent threads *    100000 loops each:       1,078.327 ms (x   0.95)
+Test2:   1 concurrent threads *    100000 loops each:       1,067.850 ms (x   0.99)
+
+Test3:   1 concurrent threads *  10000000 loops each:       1,848.440 ms
+Test3:   1 concurrent threads *  10000000 loops each:       1,834.575 ms (x   0.99)
+Test3:   1 concurrent threads *  10000000 loops each:       1,842.088 ms (x   1.00)
+
+measure:
+Test1:   1 concurrent threads *    100000 loops each:       1,925.698 ms
+Test1:   2 concurrent threads *    100000 loops each:       1,961.137 ms (x   1.02)
+Test1:   4 concurrent threads *    100000 loops each:       2,091.670 ms (x   1.07)
+Test1:   8 concurrent threads *    100000 loops each:       3,845.617 ms (x   1.84)
+Test1:  32 concurrent threads *    100000 loops each:      15,192.266 ms (x   3.95)
+Test1: 128 concurrent threads *    100000 loops each:      60,994.335 ms (x   4.01)
+
+Test2:   1 concurrent threads *    100000 loops each:       1,060.509 ms
+Test2:   2 concurrent threads *    100000 loops each:       1,074.310 ms (x   1.01)
+Test2:   4 concurrent threads *    100000 loops each:       1,371.480 ms (x   1.28)
+Test2:   8 concurrent threads *    100000 loops each:       2,834.385 ms (x   2.07)
+Test2:  32 concurrent threads *    100000 loops each:      11,332.074 ms (x   4.00)
+Test2: 128 concurrent threads *    100000 loops each:      45,390.626 ms (x   4.01)
+
+Test3:   1 concurrent threads *  10000000 loops each:       1,835.447 ms
+Test3:   2 concurrent threads *  10000000 loops each:       2,077.663 ms (x   1.13)
+Test3:   4 concurrent threads *  10000000 loops each:       2,220.717 ms (x   1.07)
+Test3:   8 concurrent threads *  10000000 loops each:       3,665.028 ms (x   1.65)
+Test3:  32 concurrent threads *  10000000 loops each:      14,526.030 ms (x   3.96)
+Test3: 128 concurrent threads *  10000000 loops each:      57,560.658 ms (x   3.96)
