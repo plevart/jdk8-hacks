@@ -248,10 +248,10 @@ public class ReflectionTest {
 
         System.out.println(
             workers[0].getClass().getSimpleName() + ": " +
-                String.format("%3d", workers.length) + " concurrent threads * " +
-                String.format("%9d", loops) + " loops each: " +
-                String.format("%,15.3f", (double) t / 1000000d) + " ms" +
-                (prevT == 0L ? "" : String.format(" (x %6.2f)", (double) t / (double) prevT))
+            String.format("%3d", workers.length) + " concurrent threads * " +
+            String.format("%9d", loops) + " loops each: " +
+            String.format("%,15.3f", (double) t / 1000000d) + " ms" +
+            (prevT == 0L ? "" : String.format(" (x %6.2f)", (double) t / (double) prevT))
         );
 
         return t;
