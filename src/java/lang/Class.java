@@ -3109,8 +3109,10 @@ public final
             annotations.putAll(declaredAnnotations);
         }
 
-        vd.annotations = annotations;
-        vd.declaredAnnotations = declaredAnnotations;
+        if (vd != null) {
+            vd.annotations = annotations;
+            vd.declaredAnnotations = declaredAnnotations;
+        }
 
         return declaredOnly ? declaredAnnotations : annotations;
     }
