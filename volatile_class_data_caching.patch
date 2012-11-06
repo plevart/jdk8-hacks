@@ -1,6 +1,6 @@
 diff -r 7ac292e57b5a src/share/classes/java/lang/Class.java
 --- a/src/share/classes/java/lang/Class.java	Thu Nov 01 14:12:21 2012 -0700
-+++ b/src/share/classes/java/lang/Class.java	Tue Nov 06 10:42:58 2012 +0100
++++ b/src/share/classes/java/lang/Class.java	Tue Nov 06 16:08:50 2012 +0100
 @@ -2212,39 +2212,72 @@
  
      // Caches for certain reflective results
@@ -282,7 +282,7 @@ diff -r 7ac292e57b5a src/share/classes/java/lang/Class.java
      }
  
      /**
-@@ -3070,41 +3074,45 @@
+@@ -3070,41 +3074,47 @@
       * @since 1.5
       */
      public Annotation[] getAnnotations() {
@@ -335,8 +335,10 @@ diff -r 7ac292e57b5a src/share/classes/java/lang/Class.java
              annotations.putAll(declaredAnnotations);
          }
 +
-+        vd.annotations = annotations;
-+        vd.declaredAnnotations = declaredAnnotations;
++        if (vd != null) {
++            vd.annotations = annotations;
++            vd.declaredAnnotations = declaredAnnotations;
++        }
 +
 +        return declaredOnly ? declaredAnnotations : annotations;
      }
@@ -344,7 +346,7 @@ diff -r 7ac292e57b5a src/share/classes/java/lang/Class.java
      // Annotation types cache their internal (AnnotationType) form
 diff -r 7ac292e57b5a src/share/classes/java/lang/reflect/Constructor.java
 --- a/src/share/classes/java/lang/reflect/Constructor.java	Thu Nov 01 14:12:21 2012 -0700
-+++ b/src/share/classes/java/lang/reflect/Constructor.java	Tue Nov 06 10:42:58 2012 +0100
++++ b/src/share/classes/java/lang/reflect/Constructor.java	Tue Nov 06 16:08:50 2012 +0100
 @@ -482,7 +482,10 @@
       * @since 1.5
       */
@@ -359,7 +361,7 @@ diff -r 7ac292e57b5a src/share/classes/java/lang/reflect/Constructor.java
      /**
 diff -r 7ac292e57b5a src/share/classes/java/lang/reflect/Executable.java
 --- a/src/share/classes/java/lang/reflect/Executable.java	Thu Nov 01 14:12:21 2012 -0700
-+++ b/src/share/classes/java/lang/reflect/Executable.java	Tue Nov 06 10:42:58 2012 +0100
++++ b/src/share/classes/java/lang/reflect/Executable.java	Tue Nov 06 16:08:50 2012 +0100
 @@ -378,11 +378,12 @@
          return AnnotationParser.toArray(declaredAnnotations());
      }
@@ -378,7 +380,7 @@ diff -r 7ac292e57b5a src/share/classes/java/lang/reflect/Executable.java
                  getConstantPool(getDeclaringClass()),
 diff -r 7ac292e57b5a src/share/classes/java/lang/reflect/Field.java
 --- a/src/share/classes/java/lang/reflect/Field.java	Thu Nov 01 14:12:21 2012 -0700
-+++ b/src/share/classes/java/lang/reflect/Field.java	Tue Nov 06 10:42:58 2012 +0100
++++ b/src/share/classes/java/lang/reflect/Field.java	Tue Nov 06 16:08:50 2012 +0100
 @@ -1027,11 +1027,15 @@
          return AnnotationParser.toArray(declaredAnnotations());
      }
@@ -400,7 +402,7 @@ diff -r 7ac292e57b5a src/share/classes/java/lang/reflect/Field.java
                  getDeclaringClass());
 diff -r 7ac292e57b5a src/share/classes/java/lang/reflect/Method.java
 --- a/src/share/classes/java/lang/reflect/Method.java	Thu Nov 01 14:12:21 2012 -0700
-+++ b/src/share/classes/java/lang/reflect/Method.java	Tue Nov 06 10:42:58 2012 +0100
++++ b/src/share/classes/java/lang/reflect/Method.java	Tue Nov 06 16:08:50 2012 +0100
 @@ -583,7 +583,10 @@
       * @since 1.5
       */
