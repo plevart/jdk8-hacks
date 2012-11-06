@@ -19,17 +19,19 @@ Currently java.lang.Class uses the following fields to maintain caches of reflec
     private transient Map<Class<? extends Annotation>, Annotation> annotations;
     private transient Map<Class<? extends Annotation>, Annotation> declaredAnnotations;
 
-If I understand correctly, currently VM can redefine the class in a way that changes method bodies. Also new methods can be added. And the set of annotations can also be altered.
+If I understand Alan's references correctly, current VM can redefine the class in a way that changes method bodies. Also new methods can be added. And the set of annotations can also be altered. And future improvements could allow even more.
 
-Because annotations are cached on Field/Method/Constructor instances, all the above fields must be invalidated when the class (or superclass because of cached inherited annotations) is redefined.
+Because annotations are cached on Field/Method/Constructor instances, all the above fields must be invalidated when the class or superclass is redefined.
 
-It can also be observed that Field/Method/Constructor caches are maintained using SoftReferences but annotations are hard references. I don't know is this is intentional. I belive that annotations could also be SoftReferenced, so that in the event of memory pressure they get cleared. Many applications retrieve annotations only in the early stages of their lifecycle and then either cache them theirselves or forget about them.
+It can also be observed that Field/Method/Constructor caches are maintained using SoftReferences but annotations are hard references. I don't know if this is intentional. I believe that annotations could also be SoftReferenced, so that in the event of memory pressure they get cleared. Many applications retrieve annotations only in the early stages of their life-cycle and then either cache them themselves or forget about them.
 
-So I designed the patch to equalize this. If this is undesirable, the patch could be modified to make a distinction again. The patch replaces the abovementioned java.lang.Class fields with a single field:
+So I designed the patch to equalize this. If this is undesirable, the patch could be modified to make a distinction again.
+
+The patch replaces the above-mentioned java.lang.Class fields with a single field:
 
     private volatile transient SoftReference<VolatileData<T>> volatileData;
 
-...which is a SoftReference to the following strucuture:
+...which is a SoftReference to the following structure:
 
     // volatile data that might get invalid when JVM TI RedefineClasses() is called
     static class VolatileData<T> {
@@ -48,7 +50,7 @@ So I designed the patch to equalize this. If this is undesirable, the patch coul
         // Value of classRedefinedCount when we created this VolatileData instance
         final int redefinedCount;
 
-So let's look at static overhead differences, 64 bit addressing (usefull load - arrays, Maps not counted since the patched code uses the same amount of same types of each).
+So let's look at static overhead differences using 64 bit addressing (useful load - arrays, Maps not counted since the patched code uses the same amount of same types of each).
 
 * Fresh java.lang.Class instance:
 
@@ -78,11 +80,11 @@ total: 8+64+108 = 180 bytes in 3 instances
 So we have 84 vs. 8 (empty) or 596 vs. 180 (fully loaded) byte overheads and
 1 vs. 1 (empty) or 9 vs. 3 (fully loaded) instance overheads
 
-Other than that, the patch also removes synchronized blocks for lazy initialization of annotations in Class, Field, Method and Constructor and replaces them with volatile fields. In case of Class.volatileData, this field is initialized using a CAS so there is no race which could install an already stale instance over more recent. Althogh that would quickly be corrected at next call to any retrieval method, because redefinedCount is now an integral part of the cached structure not an individual volatile field.
+Other than that, the patch also removes synchronized blocks for lazy initialization of annotations in Class, Field, Method and Constructor and replaces them with volatile fields. In case of Class.volatileData, this field is initialized using a CAS so there is no race which could install an already stale instance over more recent. Although such race would quickly be corrected at next call to any retrieval method, because redefinedCount is now an integral part of the cached structure not an individual volatile field.
 
-There is also a change in how annotations are cached in Field, Method and Constructor. Originaly they are cached in each copy of the Field/Method/Constructor that is returned to the outside world at each invocation of Class.getFields() etc. Such caching is not very effective if the annotations are only retrieved once per instance. The patch changes this and delegates caching to the "root" instance which is held inside Class so caching becomes more effective in certain usage patterns. There's now a possible hot-spot on the "root" instance but that seems not to be a bottleneck since the fast-path does not involve blocking synchronization (just volatile read). The effects of this change are clearly visible in one of the benchmarks.
+There is also a change in how annotations are cached in Field, Method and Constructor. Originally they are cached in each copy of the Field/Method/Constructor that is returned to the outside world at each invocation of Class.getFields() etc. Such caching is not very effective if the annotations are only retrieved once per instance. The patch changes this and delegates caching to the "root" instance which is held inside Class so caching becomes more effective in certain usage patterns. There's now a possible hot-spot on the "root" instance but that seems not to be a bottleneck since the fast-path does not involve blocking synchronization (just volatile read). The effects of this change are clearly visible in one of the benchmarks.
 
-I have tried to create 3 micro benchmarks which excersize concurrent load on 3 Class instances.
+I have tried to create 3 micro benchmarks which exercise concurrent load on 3 Class instances.
 
 Here's the benchmark code:
 
@@ -95,8 +97,8 @@ https://raw.github.com/plevart/jdk8-hacks/master/benchmark_results.txt
 
 The huge difference of Test1 results is a direct consequence of patched code delegating caching of annotations in Field/Method/Constructor to the "root" instance.
 
-The Test2 results show no noticable difference between original and patched code. This I belive is the most common usage of the API, so another level of indirection does not apear to present any noticeable performance overhead.
+Test2 results show no noticeable difference between original and patched code. This, I believe, is the most common usage of the API, so another level of indirection does not appear to present any noticeable performance overhead.
 
 The Test3 on the other hand shows the synchronization overhead of current jdk8 code in comparison with non-blocking synchronization in patched code.
 
-JEP 149 also mentiones testing with SPECjbb2005 and SPECjvm98, but that exceeds my possiblilities.
+JEP 149 also mentions testing with SPECjbb2005 and SPECjvm98, but that exceeds my possibilities.
