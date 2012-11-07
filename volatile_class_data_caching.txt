@@ -67,18 +67,46 @@ vs. patched code :
 current JDK8 code:
 
 10 OOPs + 1 int = 84 bytes
-8 SoftReference instances = 8*(header + 4 OOPs + 1 long) = 8*(24+32+8) = 8*64 = 512 bytes
-total: 84+512 = 596 bytes in 9 instances
+8 SoftReference instances = 8*(header + 4 OOPs + 1 long) = 8*(16+32+8) = 8*56 = 448 bytes
+total: 84+448 = 532 bytes in 9 instances
 
 vs. patched code :
 
 1 OOP = 8 bytes
-1 SoftReference = 64 bytes
-1 VolatileData = header + 10 OOPs + 1 int = 24+84 = 108 bytes
-total: 8+64+108 = 180 bytes in 3 instances
+1 SoftReference = 56 bytes
+1 VolatileData = header + 10 OOPs + 1 int + 4byte padding = 16+84+4 = 104 bytes
+total: 8+56+104 = 168 bytes in 3 instances
 
-So we have 84 vs. 8 (empty) or 596 vs. 180 (fully loaded) byte overheads and
-1 vs. 1 (empty) or 9 vs. 3 (fully loaded) instance overheads
+we gain 84-8 = 76 bytes on empty Class and 532-168 = 364 bytes on fully loaded Class instance and
+we gain 9-3 = 6 objects on fully loaded Class instance
+
+And here's the same calculation using 32 bit addressing:
+
+current JDK8 code:
+
+10 OOPs + 1 int = 10*4+4 = 44 bytes in 1 instance
+
+vs. patched code :
+
+1 OOP = 4 bytes in 1 instance
+
+* Fully loaded java.lang.Class (Fields, Methods, Constructors, annotations):
+
+current JDK8 code:
+
+10 OOPs + 1 int = 44 bytes
+8 SoftReference instances = 8*(header + 4 OOPs + 1 long) = 8*(8+16+8) = 8*32 = 256 bytes
+total: 44+256 = 300 bytes in 9 instances
+
+vs. patched code :
+
+1 OOP = 4 bytes
+1 SoftReference = 32 bytes
+1 VolatileData = header + 10 OOPs + 1 int  = 8+40+4 = 52 bytes
+total: 4+32+52 = 88 bytes in 3 instances
+
+we gain 44-4 = 40 bytes on empty Class and 300-88 = 212 bytes on fully loaded Class instance and
+we gain 9-3 = 6 objects on fully loaded Class instance
 
 Other than that, the patch also removes synchronized blocks for lazy initialization of annotations in Class, Field, Method and Constructor and replaces them with volatile fields. In case of Class.volatileData, this field is initialized using a CAS so there is no race which could install an already stale instance over more recent. Although such race would quickly be corrected at next call to any retrieval method, because redefinedCount is now an integral part of the cached structure not an individual volatile field.
 
