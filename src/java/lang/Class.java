@@ -2225,8 +2225,8 @@ public final
         volatile Field[] declaredPublicFields;
         volatile Method[] declaredPublicMethods;
         // Annotations
-        volatile Map<Class<? extends Annotation>, Annotation> annotations;
-        volatile Map<Class<? extends Annotation>, Annotation> declaredAnnotations;
+        volatile Annotation[] annotations;
+        volatile Annotation[] declaredAnnotations;
         // Value of classRedefinedCount when we created this VolatileData instance
         final int redefinedCount;
 
@@ -3054,7 +3054,12 @@ public final
         if (annotationClass == null)
             throw new NullPointerException();
 
-        return (A) privateGetAnnotations(false).get(annotationClass);
+        for (Annotation ann : privateGetAnnotations(false)) {
+            if (ann.annotationType() == annotationClass)
+                return annotationClass.cast(ann);
+        }
+
+        return null;
     }
 
     /**
@@ -3074,44 +3079,46 @@ public final
      * @since 1.5
      */
     public Annotation[] getAnnotations() {
-        return AnnotationParser.toArray(privateGetAnnotations(false));
+        return privateGetAnnotations(false).clone();
     }
 
     /**
      * @since 1.5
      */
     public Annotation[] getDeclaredAnnotations()  {
-        return AnnotationParser.toArray(privateGetAnnotations(true));
+        return privateGetAnnotations(true).clone();
     }
 
 
-    private Map<Class<? extends Annotation>, Annotation> privateGetAnnotations(boolean declaredOnly) {
-        Map<Class<? extends Annotation>, Annotation> res;
+    private Annotation[] privateGetAnnotations(boolean declaredOnly) {
+        Annotation[] res;
         VolatileData<T> vd = volatileData();
         if (vd != null) {
             res = declaredOnly ? vd.declaredAnnotations : vd.annotations;
             if (res != null) return res;
         }
 
-        Map<Class<? extends Annotation>, Annotation> declaredAnnotations = AnnotationParser.parseAnnotations(
+        Map<Class<? extends Annotation>, Annotation> declaredAnnotationsMap = AnnotationParser.parseAnnotations(
             getRawAnnotations(), getConstantPool(), this);
-        Map<Class<? extends Annotation>, Annotation> annotations;
+        Annotation[] declaredAnnotations = AnnotationParser.toArray(declaredAnnotationsMap);
+        Annotation[] annotations;
         Class<?> superClass = getSuperclass();
         if (superClass == null) {
             annotations = declaredAnnotations;
         } else {
-            annotations = new HashMap<>();
-            for (Map.Entry<Class<? extends Annotation>, Annotation> e : superClass.privateGetAnnotations(false).entrySet()) {
-                Class<? extends Annotation> annotationClass = e.getKey();
+            Map<Class<? extends Annotation>, Annotation> annotationsMap = new HashMap<>();
+            for (Annotation ann : superClass.privateGetAnnotations(false)) {
+                Class<? extends Annotation> annotationClass = ann.annotationType();
                 if (AnnotationType.getInstance(annotationClass).isInherited())
-                    annotations.put(annotationClass, e.getValue());
+                    annotationsMap.put(annotationClass, ann);
             }
-            annotations.putAll(declaredAnnotations);
+            annotationsMap.putAll(declaredAnnotationsMap);
+            annotations = AnnotationParser.toArray(annotationsMap);
         }
 
         if (vd != null) {
-            vd.annotations = annotations;
             vd.declaredAnnotations = declaredAnnotations;
+            vd.annotations = annotations;
         }
 
         return declaredOnly ? declaredAnnotations : annotations;
