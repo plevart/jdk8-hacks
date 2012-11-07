@@ -1,0 +1,684 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+    <script type="text/javascript" src="../../../../../../ancnav.js"></script>
+    </head>
+    <body id="SUNWwebrev" onkeypress="keypress(event);">
+    <a name="0"></a>
+    <pre>rev 6075 : Class.getAnnotaion() synchronization bottleneck and JEP-149 proposal</pre><hr></hr>
+<pre>
+   1 /*
+<a name="1" id="anc1"></a><span class="changed">   2  * Copyright (c) 1996, 2012, Oracle and/or its affiliates. All rights reserved.</span>
+   3  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+   4  *
+   5  * This code is free software; you can redistribute it and/or modify it
+   6  * under the terms of the GNU General Public License version 2 only, as
+   7  * published by the Free Software Foundation.  Oracle designates this
+   8  * particular file as subject to the "Classpath" exception as provided
+   9  * by Oracle in the LICENSE file that accompanied this code.
+  10  *
+  11  * This code is distributed in the hope that it will be useful, but WITHOUT
+  12  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  13  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+  14  * version 2 for more details (a copy is included in the LICENSE file that
+  15  * accompanied this code).
+  16  *
+  17  * You should have received a copy of the GNU General Public License version
+  18  * 2 along with this work; if not, write to the Free Software Foundation,
+  19  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+  20  *
+  21  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+  22  * or visit www.oracle.com if you need additional information or have any
+  23  * questions.
+  24  */
+  25 
+  26 package java.lang.reflect;
+  27 
+  28 import sun.reflect.ConstructorAccessor;
+  29 import sun.reflect.Reflection;
+  30 import sun.reflect.generics.repository.ConstructorRepository;
+  31 import sun.reflect.generics.factory.CoreReflectionFactory;
+  32 import sun.reflect.generics.factory.GenericsFactory;
+  33 import sun.reflect.generics.scope.ConstructorScope;
+  34 import java.lang.annotation.Annotation;
+  35 import java.lang.annotation.AnnotationFormatError;
+  36 
+  37 /**
+  38  * {@code Constructor} provides information about, and access to, a single
+  39  * constructor for a class.
+  40  *
+  41  * &lt;p&gt;{@code Constructor} permits widening conversions to occur when matching the
+  42  * actual parameters to newInstance() with the underlying
+  43  * constructor's formal parameters, but throws an
+  44  * {@code IllegalArgumentException} if a narrowing conversion would occur.
+  45  *
+  46  * @param &lt;T&gt; the class in which the constructor is declared
+  47  *
+  48  * @see Member
+  49  * @see java.lang.Class
+  50  * @see java.lang.Class#getConstructors()
+  51  * @see java.lang.Class#getConstructor(Class[])
+  52  * @see java.lang.Class#getDeclaredConstructors()
+  53  *
+  54  * @author      Kenneth Russell
+  55  * @author      Nakul Saraiya
+  56  */
+  57 public final class Constructor&lt;T&gt; extends Executable {
+  58     private Class&lt;T&gt;            clazz;
+  59     private int                 slot;
+  60     private Class&lt;?&gt;[]          parameterTypes;
+  61     private Class&lt;?&gt;[]          exceptionTypes;
+  62     private int                 modifiers;
+  63     // Generics and annotations support
+  64     private transient String    signature;
+  65     // generic info repository; lazily initialized
+  66     private transient ConstructorRepository genericInfo;
+  67     private byte[]              annotations;
+  68     private byte[]              parameterAnnotations;
+  69 
+  70     // Generics infrastructure
+  71     // Accessor for factory
+  72     private GenericsFactory getFactory() {
+  73         // create scope and factory
+  74         return CoreReflectionFactory.make(this, ConstructorScope.make(this));
+  75     }
+  76 
+  77     // Accessor for generic info repository
+  78     @Override
+  79     ConstructorRepository getGenericInfo() {
+  80         // lazily initialize repository if necessary
+  81         if (genericInfo == null) {
+  82             // create and cache generic info repository
+  83             genericInfo =
+  84                 ConstructorRepository.make(getSignature(),
+  85                                            getFactory());
+  86         }
+  87         return genericInfo; //return cached repository
+  88     }
+  89 
+  90     private volatile ConstructorAccessor constructorAccessor;
+  91     // For sharing of ConstructorAccessors. This branching structure
+  92     // is currently only two levels deep (i.e., one root Constructor
+  93     // and potentially many Constructor objects pointing to it.)
+  94     private Constructor&lt;T&gt;      root;
+  95 
+  96     /**
+  97      * Package-private constructor used by ReflectAccess to enable
+  98      * instantiation of these objects in Java code from the java.lang
+  99      * package via sun.reflect.LangReflectAccess.
+ 100      */
+ 101     Constructor(Class&lt;T&gt; declaringClass,
+ 102                 Class&lt;?&gt;[] parameterTypes,
+ 103                 Class&lt;?&gt;[] checkedExceptions,
+ 104                 int modifiers,
+ 105                 int slot,
+ 106                 String signature,
+ 107                 byte[] annotations,
+ 108                 byte[] parameterAnnotations) {
+ 109         this.clazz = declaringClass;
+ 110         this.parameterTypes = parameterTypes;
+ 111         this.exceptionTypes = checkedExceptions;
+ 112         this.modifiers = modifiers;
+ 113         this.slot = slot;
+ 114         this.signature = signature;
+ 115         this.annotations = annotations;
+ 116         this.parameterAnnotations = parameterAnnotations;
+ 117     }
+ 118 
+ 119     /**
+ 120      * Package-private routine (exposed to java.lang.Class via
+ 121      * ReflectAccess) which returns a copy of this Constructor. The copy's
+ 122      * "root" field points to this Constructor.
+ 123      */
+ 124     Constructor&lt;T&gt; copy() {
+ 125         // This routine enables sharing of ConstructorAccessor objects
+ 126         // among Constructor objects which refer to the same underlying
+ 127         // method in the VM. (All of this contortion is only necessary
+ 128         // because of the "accessibility" bit in AccessibleObject,
+ 129         // which implicitly requires that new java.lang.reflect
+ 130         // objects be fabricated for each reflective call on Class
+ 131         // objects.)
+ 132         Constructor&lt;T&gt; res = new Constructor&lt;&gt;(clazz,
+ 133                                                parameterTypes,
+ 134                                                exceptionTypes, modifiers, slot,
+ 135                                                signature,
+ 136                                                annotations,
+ 137                                                parameterAnnotations);
+ 138         res.root = this;
+ 139         // Might as well eagerly propagate this if already present
+ 140         res.constructorAccessor = constructorAccessor;
+ 141         return res;
+ 142     }
+ 143 
+ 144     @Override
+ 145     boolean hasGenericInformation() {
+ 146         return (getSignature() != null);
+ 147     }
+ 148 
+ 149     @Override
+ 150     byte[] getAnnotationBytes() {
+ 151         return annotations;
+ 152     }
+ 153 
+ 154     /**
+ 155      * {@inheritDoc}
+ 156      */
+ 157     @Override
+ 158     public Class&lt;T&gt; getDeclaringClass() {
+ 159         return clazz;
+ 160     }
+ 161 
+ 162     /**
+ 163      * Returns the name of this constructor, as a string.  This is
+ 164      * the binary name of the constructor's declaring class.
+ 165      */
+ 166     @Override
+ 167     public String getName() {
+ 168         return getDeclaringClass().getName();
+ 169     }
+ 170 
+ 171     /**
+ 172      * {@inheritDoc}
+ 173      */
+ 174     @Override
+ 175     public int getModifiers() {
+ 176         return modifiers;
+ 177     }
+ 178 
+ 179     /**
+ 180      * {@inheritDoc}
+ 181      * @throws GenericSignatureFormatError {@inheritDoc}
+ 182      * @since 1.5
+ 183      */
+ 184     @Override
+ 185     @SuppressWarnings({"rawtypes", "unchecked"})
+ 186     public TypeVariable&lt;Constructor&lt;T&gt;&gt;[] getTypeParameters() {
+ 187       if (getSignature() != null) {
+ 188         return (TypeVariable&lt;Constructor&lt;T&gt;&gt;[])getGenericInfo().getTypeParameters();
+ 189       } else
+ 190           return (TypeVariable&lt;Constructor&lt;T&gt;&gt;[])new TypeVariable[0];
+ 191     }
+ 192 
+ 193 
+ 194     /**
+ 195      * {@inheritDoc}
+ 196      */
+ 197     @Override
+ 198     public Class&lt;?&gt;[] getParameterTypes() {
+ 199         return parameterTypes.clone();
+ 200     }
+ 201 
+ 202     /**
+ 203      * {@inheritDoc}
+ 204      * @throws GenericSignatureFormatError {@inheritDoc}
+ 205      * @throws TypeNotPresentException {@inheritDoc}
+ 206      * @throws MalformedParameterizedTypeException {@inheritDoc}
+ 207      * @since 1.5
+ 208      */
+ 209     @Override
+ 210     public Type[] getGenericParameterTypes() {
+ 211         return super.getGenericParameterTypes();
+ 212     }
+ 213 
+ 214     /**
+ 215      * {@inheritDoc}
+ 216      */
+ 217     @Override
+ 218     public Class&lt;?&gt;[] getExceptionTypes() {
+ 219         return exceptionTypes.clone();
+ 220     }
+ 221 
+ 222 
+ 223     /**
+ 224      * {@inheritDoc}
+ 225      * @throws GenericSignatureFormatError {@inheritDoc}
+ 226      * @throws TypeNotPresentException {@inheritDoc}
+ 227      * @throws MalformedParameterizedTypeException {@inheritDoc}
+ 228      * @since 1.5
+ 229      */
+ 230     @Override
+ 231     public Type[] getGenericExceptionTypes() {
+ 232         return super.getGenericExceptionTypes();
+ 233     }
+ 234 
+ 235     /**
+ 236      * Compares this {@code Constructor} against the specified object.
+ 237      * Returns true if the objects are the same.  Two {@code Constructor} objects are
+ 238      * the same if they were declared by the same class and have the
+ 239      * same formal parameter types.
+ 240      */
+ 241     public boolean equals(Object obj) {
+ 242         if (obj != null &amp;&amp; obj instanceof Constructor) {
+ 243             Constructor&lt;?&gt; other = (Constructor&lt;?&gt;)obj;
+ 244             if (getDeclaringClass() == other.getDeclaringClass()) {
+ 245                 return equalParamTypes(parameterTypes, other.parameterTypes);
+ 246             }
+ 247         }
+ 248         return false;
+ 249     }
+ 250 
+ 251     /**
+ 252      * Returns a hashcode for this {@code Constructor}. The hashcode is
+ 253      * the same as the hashcode for the underlying constructor's
+ 254      * declaring class name.
+ 255      */
+ 256     public int hashCode() {
+ 257         return getDeclaringClass().getName().hashCode();
+ 258     }
+ 259 
+ 260     /**
+ 261      * Returns a string describing this {@code Constructor}.  The string is
+ 262      * formatted as the constructor access modifiers, if any,
+ 263      * followed by the fully-qualified name of the declaring class,
+ 264      * followed by a parenthesized, comma-separated list of the
+ 265      * constructor's formal parameter types.  For example:
+ 266      * &lt;pre&gt;
+ 267      *    public java.util.Hashtable(int,float)
+ 268      * &lt;/pre&gt;
+ 269      *
+ 270      * &lt;p&gt;The only possible modifiers for constructors are the access
+ 271      * modifiers {@code public}, {@code protected} or
+ 272      * {@code private}.  Only one of these may appear, or none if the
+ 273      * constructor has default (package) access.
+ 274      */
+ 275     public String toString() {
+ 276         return sharedToString(Modifier.constructorModifiers(),
+ 277                               parameterTypes,
+ 278                               exceptionTypes);
+ 279     }
+ 280 
+ 281     @Override
+ 282     void specificToStringHeader(StringBuilder sb) {
+ 283         sb.append(Field.getTypeName(getDeclaringClass()));
+ 284     }
+ 285 
+ 286     /**
+ 287      * Returns a string describing this {@code Constructor},
+ 288      * including type parameters.  The string is formatted as the
+ 289      * constructor access modifiers, if any, followed by an
+ 290      * angle-bracketed comma separated list of the constructor's type
+ 291      * parameters, if any, followed by the fully-qualified name of the
+ 292      * declaring class, followed by a parenthesized, comma-separated
+ 293      * list of the constructor's generic formal parameter types.
+ 294      *
+ 295      * If this constructor was declared to take a variable number of
+ 296      * arguments, instead of denoting the last parameter as
+ 297      * "&lt;tt&gt;&lt;i&gt;Type&lt;/i&gt;[]&lt;/tt&gt;", it is denoted as
+ 298      * "&lt;tt&gt;&lt;i&gt;Type&lt;/i&gt;...&lt;/tt&gt;".
+ 299      *
+ 300      * A space is used to separate access modifiers from one another
+ 301      * and from the type parameters or return type.  If there are no
+ 302      * type parameters, the type parameter list is elided; if the type
+ 303      * parameter list is present, a space separates the list from the
+ 304      * class name.  If the constructor is declared to throw
+ 305      * exceptions, the parameter list is followed by a space, followed
+ 306      * by the word "{@code throws}" followed by a
+ 307      * comma-separated list of the thrown exception types.
+ 308      *
+ 309      * &lt;p&gt;The only possible modifiers for constructors are the access
+ 310      * modifiers {@code public}, {@code protected} or
+ 311      * {@code private}.  Only one of these may appear, or none if the
+ 312      * constructor has default (package) access.
+ 313      *
+ 314      * @return a string describing this {@code Constructor},
+ 315      * include type parameters
+ 316      *
+ 317      * @since 1.5
+ 318      */
+ 319     @Override
+ 320     public String toGenericString() {
+ 321         return sharedToGenericString(Modifier.constructorModifiers());
+ 322     }
+ 323 
+ 324     @Override
+ 325     void specificToGenericStringHeader(StringBuilder sb) {
+ 326         specificToStringHeader(sb);
+ 327     }
+ 328 
+ 329     /**
+ 330      * Uses the constructor represented by this {@code Constructor} object to
+ 331      * create and initialize a new instance of the constructor's
+ 332      * declaring class, with the specified initialization parameters.
+ 333      * Individual parameters are automatically unwrapped to match
+ 334      * primitive formal parameters, and both primitive and reference
+ 335      * parameters are subject to method invocation conversions as necessary.
+ 336      *
+ 337      * &lt;p&gt;If the number of formal parameters required by the underlying constructor
+ 338      * is 0, the supplied {@code initargs} array may be of length 0 or null.
+ 339      *
+ 340      * &lt;p&gt;If the constructor's declaring class is an inner class in a
+ 341      * non-static context, the first argument to the constructor needs
+ 342      * to be the enclosing instance; see section 15.9.3 of
+ 343      * &lt;cite&gt;The Java&amp;trade; Language Specification&lt;/cite&gt;.
+ 344      *
+ 345      * &lt;p&gt;If the required access and argument checks succeed and the
+ 346      * instantiation will proceed, the constructor's declaring class
+ 347      * is initialized if it has not already been initialized.
+ 348      *
+ 349      * &lt;p&gt;If the constructor completes normally, returns the newly
+ 350      * created and initialized instance.
+ 351      *
+ 352      * @param initargs array of objects to be passed as arguments to
+ 353      * the constructor call; values of primitive types are wrapped in
+ 354      * a wrapper object of the appropriate type (e.g. a {@code float}
+ 355      * in a {@link java.lang.Float Float})
+ 356      *
+ 357      * @return a new object created by calling the constructor
+ 358      * this object represents
+ 359      *
+ 360      * @exception IllegalAccessException    if this {@code Constructor} object
+ 361      *              is enforcing Java language access control and the underlying
+ 362      *              constructor is inaccessible.
+ 363      * @exception IllegalArgumentException  if the number of actual
+ 364      *              and formal parameters differ; if an unwrapping
+ 365      *              conversion for primitive arguments fails; or if,
+ 366      *              after possible unwrapping, a parameter value
+ 367      *              cannot be converted to the corresponding formal
+ 368      *              parameter type by a method invocation conversion; if
+ 369      *              this constructor pertains to an enum type.
+ 370      * @exception InstantiationException    if the class that declares the
+ 371      *              underlying constructor represents an abstract class.
+ 372      * @exception InvocationTargetException if the underlying constructor
+ 373      *              throws an exception.
+ 374      * @exception ExceptionInInitializerError if the initialization provoked
+ 375      *              by this method fails.
+ 376      */
+ 377     public T newInstance(Object ... initargs)
+ 378         throws InstantiationException, IllegalAccessException,
+ 379                IllegalArgumentException, InvocationTargetException
+ 380     {
+ 381         if (!override) {
+ 382             if (!Reflection.quickCheckMemberAccess(clazz, modifiers)) {
+ 383                 Class&lt;?&gt; caller = Reflection.getCallerClass(2);
+ 384 
+ 385                 checkAccess(caller, clazz, null, modifiers);
+ 386             }
+ 387         }
+ 388         if ((clazz.getModifiers() &amp; Modifier.ENUM) != 0)
+ 389             throw new IllegalArgumentException("Cannot reflectively create enum objects");
+ 390         ConstructorAccessor ca = constructorAccessor;   // read volatile
+ 391         if (ca == null) {
+ 392             ca = acquireConstructorAccessor();
+ 393         }
+ 394         @SuppressWarnings("unchecked")
+ 395         T inst = (T) ca.newInstance(initargs);
+ 396         return inst;
+ 397     }
+ 398 
+ 399     /**
+ 400      * {@inheritDoc}
+ 401      * @since 1.5
+ 402      */
+ 403     @Override
+ 404     public boolean isVarArgs() {
+ 405         return super.isVarArgs();
+ 406     }
+ 407 
+ 408     /**
+ 409      * {@inheritDoc}
+ 410      * @since 1.5
+ 411      */
+ 412     @Override
+ 413     public boolean isSynthetic() {
+ 414         return super.isSynthetic();
+ 415     }
+ 416 
+ 417     // NOTE that there is no synchronization used here. It is correct
+ 418     // (though not efficient) to generate more than one
+ 419     // ConstructorAccessor for a given Constructor. However, avoiding
+ 420     // synchronization will probably make the implementation more
+ 421     // scalable.
+ 422     private ConstructorAccessor acquireConstructorAccessor() {
+ 423         // First check to see if one has been created yet, and take it
+ 424         // if so.
+ 425         ConstructorAccessor tmp = null;
+ 426         if (root != null) tmp = root.getConstructorAccessor();
+ 427         if (tmp != null) {
+ 428             constructorAccessor = tmp;
+ 429         } else {
+ 430             // Otherwise fabricate one and propagate it up to the root
+ 431             tmp = reflectionFactory.newConstructorAccessor(this);
+ 432             setConstructorAccessor(tmp);
+ 433         }
+ 434 
+ 435         return tmp;
+ 436     }
+ 437 
+ 438     // Returns ConstructorAccessor for this Constructor object, not
+ 439     // looking up the chain to the root
+ 440     ConstructorAccessor getConstructorAccessor() {
+ 441         return constructorAccessor;
+ 442     }
+ 443 
+ 444     // Sets the ConstructorAccessor for this Constructor object and
+ 445     // (recursively) its root
+ 446     void setConstructorAccessor(ConstructorAccessor accessor) {
+ 447         constructorAccessor = accessor;
+ 448         // Propagate up
+ 449         if (root != null) {
+ 450             root.setConstructorAccessor(accessor);
+ 451         }
+ 452     }
+ 453 
+ 454     int getSlot() {
+ 455         return slot;
+ 456     }
+ 457 
+ 458     String getSignature() {
+ 459         return signature;
+ 460     }
+ 461 
+ 462     byte[] getRawAnnotations() {
+ 463         return annotations;
+ 464     }
+ 465 
+ 466     byte[] getRawParameterAnnotations() {
+ 467         return parameterAnnotations;
+ 468     }
+ 469 
+ 470 
+ 471     /**
+ 472      * {@inheritDoc}
+ 473      * @throws NullPointerException  {@inheritDoc}
+ 474      * @since 1.5
+ 475      */
+ 476     public &lt;T extends Annotation&gt; T getAnnotation(Class&lt;T&gt; annotationClass) {
+ 477         return super.getAnnotation(annotationClass);
+ 478     }
+ 479 
+ 480     /**
+ 481      * {@inheritDoc}
+ 482      * @since 1.5
+ 483      */
+ 484     public Annotation[] getDeclaredAnnotations()  {
+<a name="2" id="anc2"></a>
+
+
+ 485         return super.getDeclaredAnnotations();
+ 486     }
+ 487 
+ 488     /**
+ 489      * {@inheritDoc}
+ 490      * @since 1.5
+ 491      */
+ 492     @Override
+ 493     public Annotation[][] getParameterAnnotations() {
+ 494         return sharedGetParameterAnnotations(parameterTypes, parameterAnnotations);
+ 495     }
+ 496 
+ 497     @Override
+ 498     void handleParameterNumberMismatch(int resultLength, int numParameters) {
+ 499         Class&lt;?&gt; declaringClass = getDeclaringClass();
+ 500         if (declaringClass.isEnum() ||
+ 501             declaringClass.isAnonymousClass() ||
+ 502             declaringClass.isLocalClass() )
+ 503             return ; // Can't do reliable parameter counting
+ 504         else {
+ 505             if (!declaringClass.isMemberClass() || // top-level
+ 506                 // Check for the enclosing instance parameter for
+ 507                 // non-static member classes
+ 508                 (declaringClass.isMemberClass() &amp;&amp;
+ 509                  ((declaringClass.getModifiers() &amp; Modifier.STATIC) == 0)  &amp;&amp;
+ 510                  resultLength + 1 != numParameters) ) {
+ 511                 throw new AnnotationFormatError(
+ 512                           "Parameter annotations don't match number of parameters");
+ 513             }
+ 514         }
+ 515     }
+ 516 }
+<a name="3" id="anc3"></a><b style="font-size: large; color: red">--- EOF ---</b>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</pre><form name="eof"><input name="value" value="3" type="hidden" /></form></body></html>

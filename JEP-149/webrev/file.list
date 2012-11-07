@@ -1,0 +1,5 @@
+src/share/classes/java/lang/Class.java
+src/share/classes/java/lang/reflect/Constructor.java
+src/share/classes/java/lang/reflect/Executable.java
+src/share/classes/java/lang/reflect/Field.java
+src/share/classes/java/lang/reflect/Method.java

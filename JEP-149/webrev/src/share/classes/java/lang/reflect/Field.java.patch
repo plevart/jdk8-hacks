@@ -1,0 +1,28 @@
+--- old/src/share/classes/java/lang/reflect/Field.java	2012-11-07 17:09:56.024926538 +0100
++++ new/src/share/classes/java/lang/reflect/Field.java	2012-11-07 17:09:55.914928718 +0100
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 1996, 2011, Oracle and/or its affiliates. All rights reserved.
++ * Copyright (c) 1996, 2006, Oracle and/or its affiliates. All rights reserved.
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  *
+  * This code is free software; you can redistribute it and/or modify it
+@@ -1027,11 +1027,15 @@
+         return AnnotationParser.toArray(declaredAnnotations());
+     }
+ 
+-    private transient Map<Class<? extends Annotation>, Annotation> declaredAnnotations;
++    private volatile transient Map<Class<? extends Annotation>, Annotation> declaredAnnotations;
+ 
+-    private synchronized  Map<Class<? extends Annotation>, Annotation> declaredAnnotations() {
++    private Map<Class<? extends Annotation>, Annotation> declaredAnnotations() {
++        if (root != null)
++            return root.declaredAnnotations();
++
++        Map<Class<? extends Annotation>, Annotation> declaredAnnotations = this.declaredAnnotations;
+         if (declaredAnnotations == null) {
+-            declaredAnnotations = AnnotationParser.parseAnnotations(
++            this.declaredAnnotations = declaredAnnotations = AnnotationParser.parseAnnotations(
+                 annotations, sun.misc.SharedSecrets.getJavaLangAccess().
+                 getConstantPool(getDeclaringClass()),
+                 getDeclaringClass());
