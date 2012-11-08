@@ -64,6 +64,9 @@ vs. patched code :
 
 1 OOP + 4byte padding = 12 bytes in 1 instance
 
+- vs. SoftCache
+
+1 OOP + 4byte padding = 12 bytes in 1 instance
 
 * Fully loaded java.lang.Class (Fields, Methods, Constructors, annotations):
 
@@ -80,6 +83,13 @@ total: 84+448 = 532 bytes in 9 instances
 1 VolatileData = header + 10 OOPs + 1 int + 4byte padding = 16+84+4 = 104 bytes
 total: 12+56+104 = 172 bytes in 3 instances
 
+- vs. SoftCache
+
+1 OOP + 4byte padding = 12 bytes
+1 SoftReference + 1 OOP = 56+8 = 64 bytes
+1 int[10] array = 24byte header + 10*4 = 24+40 = 64 bytes
+-9 array headers = -9*24 = -216 bytes
+total: 12+64+64-216 = 140-216 = -66 bytes
 
 * Just one field loaded (say declaredMethods)
 
@@ -96,6 +106,12 @@ total: 84+56 = 140 bytes in 2 instances
 1 VolatileData = header + 10 OOPs + 1 int + 4byte padding = 16+84+4 = 104 bytes
 total: 12+56+104 = 172 bytes in 3 instances
 
+- vs. SoftCache
+
+1 OOP + 4byte padding = 12 bytes
+1 SoftReference + 1 OOP = 56+8 = 64 bytes
+1 int[10] array = 24byte header + 10*4 = 24+40 = 64 bytes
+total: 12+64+64 = 140 bytes
 
 And here's the same calculation using 32 bit addressing:
 
