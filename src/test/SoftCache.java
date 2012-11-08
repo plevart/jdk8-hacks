@@ -2,14 +2,12 @@ package test;
 
 import java.lang.ref.SoftReference;
 import java.lang.reflect.Array;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.List;
 
 /**
- * A compact immutable generic container of mappings {@code K -> V[]} where all {@code V}s are SoftReferenced and individual mapping can:
+ * A compact immutable generic container of mappings {@code K -> V[]} where all {@code V}s are SoftReferenced and individual mapping can
+ * either be present or not present. The number of all mapped {@code V}s can not exceed {@link Short#MAX_VALUE}
  * <ul>
- * <li>either be present and the number of mapped {@code V}s for that mapping is between 0 and {@link Short#MAX_VALUE} or</ln>
+ * <li>either be present or</ln>
  * <li>not present</li>
  * </ul>
  * Implementation note: for compactness reason, this class is a subclass of {@link SoftReference}. Method {@link #get()} returns
@@ -29,7 +27,7 @@ public class SoftCache<K extends Enum<K>, V> extends SoftReference<V[]> {
      * A constructor for instance with a single mapping: {@code key -> values}
      *
      * @param key    the non {@code null} key
-     * @param values the non null values array with a maximum length of {@link Short#MAX_VALUE}
+     * @param values the non null values array
      */
     public SoftCache(K key, V... values) {
         this(offsetsFor(key), values.clone());
@@ -90,7 +88,7 @@ public class SoftCache<K extends Enum<K>, V> extends SoftReference<V[]> {
             length = allValues.length - offset;
         }
 
-        // copy elements from the range of underlying array into new array of same type
+        // copy elements from the range of underlying array into new array of requested type
         @SuppressWarnings("unchecked")
         V2[] values = (V2[]) Array.newInstance(arrayComponentType, length);
         System.arraycopy(allValues, offset, values, 0, length);
@@ -98,12 +96,20 @@ public class SoftCache<K extends Enum<K>, V> extends SoftReference<V[]> {
         return values;
     }
 
+    public SoftCache<K, V> put(K key, V... values) {
+        return this;
+    }
+
+    public SoftCache<K, V> remove(K key) {
+        return this;
+    }
+
     private static short[] offsetsFor(Enum<?> key) {
-        int ord = key.ordinal();
-        short[] offsets = new short[ord + 1];
-        for (int i = 0; i < ord; i++)
+        int ki = key.ordinal();
+        short[] offsets = new short[ki + 1];
+        for (int i = 0; i < ki; i++)
             offsets[i] = -1;
-        offsets[ord] = 0;
+        offsets[ki] = 0;
         return offsets;
     }
 }
