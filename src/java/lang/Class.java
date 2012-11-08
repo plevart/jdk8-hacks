@@ -40,14 +40,8 @@ import java.io.InputStream;
 import java.io.ObjectStreamField;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.Map;
-import java.util.HashMap;
+import java.util.*;
+
 import sun.misc.Unsafe;
 import sun.reflect.ConstantPool;
 import sun.reflect.Reflection;
@@ -3045,6 +3039,17 @@ public final
             throw new ClassCastException(this.toString());
     }
 
+    private static final int ANNOTATION_LINEAR_SEARCH_MAX_LENGTH = 6;
+
+    private static final Comparator<Object> ANNOTATION_TYPE_HASH_ORDER = new Comparator<Object>() {
+        @Override
+        public int compare(Object o1, Object o2) {
+            int hash1 = o1 instanceof Integer ? (Integer) o1 : ((Annotation) o1).annotationType().hashCode();
+            int hash2 = o2 instanceof Integer ? (Integer) o2 : ((Annotation) o2).annotationType().hashCode();
+            return hash1 - hash2;
+        }
+    };
+
     /**
      * @throws NullPointerException {@inheritDoc}
      * @since 1.5
@@ -3054,11 +3059,49 @@ public final
         if (annotationClass == null)
             throw new NullPointerException();
 
-        for (Annotation ann : privateGetAnnotations(false)) {
-            if (ann.annotationType() == annotationClass)
-                return annotationClass.cast(ann);
+        Annotation[] annotations = privateGetAnnotations(false);
+
+        // linear search for small arrays
+        if (annotations.length <= ANNOTATION_LINEAR_SEARCH_MAX_LENGTH) {
+            for (Annotation annotation : annotations) {
+                if (annotation.annotationType() == annotationClass) {
+                    return annotationClass.cast(annotation);
+                }
+            }
+        }
+        else {
+            // binary search by hash for large arrays
+            int annotationTypeHash = annotationClass.hashCode();
+
+            // pin-point the candidate by hash
+            int i = Arrays.binarySearch(annotations, annotationTypeHash, ANNOTATION_TYPE_HASH_ORDER);
+
+            // no match by hashCode -> no match at all
+            if (i < 0)
+                return null;
+
+            // we have a potential match -> search the neighborhood with common hashCode
+            // from i backwards
+            for (int j = i; j >= 0; j--) {
+                Annotation annotation = annotations[j];
+                Class<?> annType = annotation.annotationType();
+                if (annType == annotationClass)
+                    return annotationClass.cast(annotation);
+                if (annType.hashCode() != annotationTypeHash)
+                    break;
+            }
+            // from i+1 forwards
+            for (int j = i+1; j < annotations.length; j++) {
+                Annotation annotation = annotations[j];
+                Class<?> annType = annotation.annotationType();
+                if (annType == annotationClass)
+                    return annotationClass.cast(annotation);
+                if (annType.hashCode() != annotationTypeHash)
+                    break;
+            }
         }
 
+        // no match
         return null;
     }
 
@@ -3099,7 +3142,8 @@ public final
         }
 
         Map<Class<? extends Annotation>, Annotation> declaredAnnotationsMap = AnnotationParser.parseAnnotations(
-            getRawAnnotations(), getConstantPool(), this);
+            getRawAnnotations(), getConstantPool(), this
+        );
         Annotation[] declaredAnnotations = AnnotationParser.toArray(declaredAnnotationsMap);
         Annotation[] annotations;
         Class<?> superClass = getSuperclass();
@@ -3114,6 +3158,11 @@ public final
             }
             annotationsMap.putAll(declaredAnnotationsMap);
             annotations = AnnotationParser.toArray(annotationsMap);
+        }
+
+        // sort annotations array for later quick retrieval
+        if (annotations.length > ANNOTATION_LINEAR_SEARCH_MAX_LENGTH) {
+            Arrays.sort(annotations, ANNOTATION_TYPE_HASH_ORDER);
         }
 
         if (vd != null) {
