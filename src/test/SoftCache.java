@@ -3,7 +3,7 @@ package test;
 import java.io.PrintStream;
 import java.lang.ref.SoftReference;
 import java.lang.reflect.Array;
-import java.util.Arrays;
+import java.util.*;
 
 /**
  * A compact immutable generic container of mappings {@code K -> V[]} where all {@code V}s are SoftReferenced and individual mapping can
@@ -15,14 +15,14 @@ import java.util.Arrays;
 public class SoftCache<K extends Enum<K>, V> extends SoftReference<V[]> {
 
     /**
-     * Empty instance constructor
+     * Empty SoftCache instance constructor
      */
     public SoftCache() {
         this((int[]) null, null);
     }
 
     /**
-     * A constructor for instance with a single mapping: {@code key -> values}
+     * A constructor for SoftCache instance with a single mapping: {@code key -> values}
      *
      * @param key    the non {@code null} key
      * @param values the non null values array
@@ -31,10 +31,16 @@ public class SoftCache<K extends Enum<K>, V> extends SoftReference<V[]> {
         this(offsetsFor(key), values.clone());
     }
 
+    /**
+     * offsets of 1st elements of individual sub-sequences in backing 'allValues' array. Each sub-sequence extends to the
+     * position just before the next sub-sequence begins. the last sub-sequence extends to the end of the underlying backing array.
+     * If high-order bit of the offsets element is set (negative value) then this is a mark that no mapping exists for the particular key.
+     * The offsets array is indexed by key's ordinals.
+     */
     private final int[] offsets;
 
-    private SoftCache(int[] offsets, V[] values) {
-        super(values);
+    private SoftCache(int[] offsets, V[] allValues) {
+        super(allValues);
         this.offsets = offsets;
     }
 
@@ -78,8 +84,8 @@ public class SoftCache<K extends Enum<K>, V> extends SoftReference<V[]> {
             // retrieve length
             int nextKi = ki + 1;
             int length = offsets.length > nextKi
-                         ? (offsets[nextKi] & Integer.MAX_VALUE) - offset
-                         : allValues.length - offset;
+                ? (offsets[nextKi] & Integer.MAX_VALUE) - offset
+                : allValues.length - offset;
 
             // copy elements from the range of underlying array into new array of requested type
             @SuppressWarnings("unchecked")
@@ -87,7 +93,8 @@ public class SoftCache<K extends Enum<K>, V> extends SoftReference<V[]> {
             System.arraycopy(allValues, offset, values, 0, length);
 
             return values;
-        } else {
+        }
+        else {
             return null;
         }
     }
@@ -104,7 +111,8 @@ public class SoftCache<K extends Enum<K>, V> extends SoftReference<V[]> {
                 newOffsets = offsets.clone();
                 // make sure ki-th element is marked as present in newOffsets
                 newOffsets[ki] = offset = offsets[ki] & Integer.MAX_VALUE;
-            } else {
+            }
+            else {
                 // old offsets array is to small - make newOffsets array big enough for index ki
                 newOffsets = Arrays.copyOf(offsets, ki + 1);
                 // fill new elements with the offset pointing after the last element in allValues array
@@ -118,8 +126,8 @@ public class SoftCache<K extends Enum<K>, V> extends SoftReference<V[]> {
             // retrieve oldLength
             int nextKi = ki + 1;
             int oldLength = newOffsets.length > nextKi
-                            ? (newOffsets[nextKi] & Integer.MAX_VALUE) - offset
-                            : allValues.length - offset;
+                ? (newOffsets[nextKi] & Integer.MAX_VALUE) - offset
+                : allValues.length - offset;
             // update newOffsets past 'ki' to accommodate for array extension/shrinkage
             int delta = newValues.length - oldLength;
             if (delta != 0) {
@@ -129,6 +137,7 @@ public class SoftCache<K extends Enum<K>, V> extends SoftReference<V[]> {
             // compute newAllLength
             int newAllLength = allValues.length - oldLength + newValues.length;
             // create newAllValues array
+            @SuppressWarnings("unchecked")
             V[] newAllValues = (V[]) Array.newInstance(allValues.getClass().getComponentType(), newAllLength);
             // copy prefix
             if (offset > 0)
@@ -143,7 +152,8 @@ public class SoftCache<K extends Enum<K>, V> extends SoftReference<V[]> {
             // create a fresh instance with added/replaced mapping
             return new SoftCache<>(newOffsets, newAllValues);
 
-        } else { // empty or cleared
+        }
+        else { // empty or cleared
             // just create a fresh instance with single mapping
             return new SoftCache<>(key, newValues);
         }
@@ -157,49 +167,61 @@ public class SoftCache<K extends Enum<K>, V> extends SoftReference<V[]> {
             int offset;
             int[] newOffsets;
             if (offsets.length > ki) {
-                // old offsets array is long enough but element marked as absent- just return this
-                if (offsets[ki] < 0) return this;
+                offset = offsets[ki];
+                // element marked as absent - just return this
+                if (offset < 0) return this;
                 // old offsets array is long enough - just clone it
                 newOffsets = offsets.clone();
-                // make sure ki-th element is marked as present in newOffsets
-                newOffsets[ki] = offset = offsets[ki] & Integer.MAX_VALUE;
-            } else {
-                // old offsets array is to small - just return this
+                // mark ki-th element as not present in newOffsets
+                newOffsets[ki] = offset | Integer.MIN_VALUE;
+            }
+            else {
+                // old offsets array is to small - no such key - just return this
                 return this;
             }
-            // TODO...
-            // retrieve oldLength
+            // retrieve length
             int nextKi = ki + 1;
-            int oldLength = newOffsets.length > nextKi
-                            ? (newOffsets[nextKi] & Integer.MAX_VALUE) - offset
-                            : allValues.length - offset;
-            // update newOffsets past 'ki' to accommodate for array extension/shrinkage
-            int delta = newValues.length - oldLength;
-            if (delta != 0) {
+            int length = newOffsets.length > nextKi
+                ? (newOffsets[nextKi] & Integer.MAX_VALUE) - offset
+                : allValues.length - offset;
+            // update newOffsets past 'ki' to accommodate for array shrinkage
+            if (length != 0) {
                 for (int i = ki + 1; i < newOffsets.length; i++)
-                    newOffsets[i] += delta;
+                    newOffsets[i] -= length;
             }
             // compute newAllLength
-            int newAllLength = allValues.length - oldLength + newValues.length;
+            int newAllLength = allValues.length - length;
             // create newAllValues array
+            @SuppressWarnings("unchecked")
             V[] newAllValues = (V[]) Array.newInstance(allValues.getClass().getComponentType(), newAllLength);
             // copy prefix
             if (offset > 0)
                 System.arraycopy(allValues, 0, newAllValues, 0, offset);
-            // copy newValues
-            if (newValues.length > 0)
-                System.arraycopy(newValues, 0, newAllValues, offset, newValues.length);
             // copy suffix
-            int suffixOffset = offset + oldLength;
+            int suffixOffset = offset + length;
             if (suffixOffset < allValues.length)
-                System.arraycopy(allValues, suffixOffset, newAllValues, offset + newValues.length, allValues.length - suffixOffset);
-            // create a fresh instance with added/replaced mapping
+                System.arraycopy(allValues, suffixOffset, newAllValues, offset, allValues.length - suffixOffset);
+            // create a fresh instance with removed mapping
             return new SoftCache<>(newOffsets, newAllValues);
 
-        } else { // empty or cleared
-            // just create a fresh instance with single mapping
-            return new SoftCache<>(key, newValues);
         }
+        else { // empty or cleared
+            // just return this
+            return this;
+        }
+    }
+
+    public EnumMap<K, List<V>> toMap(Class<K> keyType) {
+        EnumMap<K, List<V>> map = new EnumMap<K, List<V>>(keyType);
+        for (K k : EnumSet.allOf(keyType)) {
+            @SuppressWarnings("unchecked")
+            // it's OK to make Object[]s here, we'll wrap them into lists anyway
+            V[] values = (V[]) get(k, (Class) Object.class);
+            if (values != null) {
+                map.put(k, Arrays.asList(values));
+            }
+        }
+        return map;
     }
 
     private static int[] offsetsFor(Enum<?> key) {
@@ -214,32 +236,47 @@ public class SoftCache<K extends Enum<K>, V> extends SoftReference<V[]> {
 
     // testing...
 
-    void dump(K[] keys, Class<? extends V> arrayComponentType, PrintStream out) {
-        for (K k : keys) {
-            V[] vals = get(k, arrayComponentType);
-            System.out.println(k + "->" + (vals == null ? "null" : Arrays.toString(vals)));
-        }
-        System.out.println();
+    void dump(Class<K> keyType, PrintStream out) {
+        Map<K, List<V>> map = toMap(keyType);
+        out.println("    map: " + map);
+        out.println(" values: " + Arrays.toString(super.get()));
+        out.println("offsets: " + Arrays.toString(offsets));
+        out.println();
     }
 
     enum Key {
         K1, K2, K3, K4
     }
 
+    static SoftCache<Key, String> test(SoftCache<Key, String> sc) {
+        sc.dump(Key.class, System.out);
+        sc = sc.put(Key.K1, "V1.a", "V1.b");
+        sc.dump(Key.class, System.out);
+        sc = sc.put(Key.K4, "V4.a", "V4.b");
+        sc.dump(Key.class, System.out);
+        sc = sc.put(Key.K2);
+        sc.dump(Key.class, System.out);
+        sc = sc.put(Key.K3);
+        sc.dump(Key.class, System.out);
+        sc = sc.put(Key.K1);
+        sc.dump(Key.class, System.out);
+        sc = sc.put(Key.K2, "V2.a", "V2.b", "V2.c");
+        sc.dump(Key.class, System.out);
+        sc = sc.remove(Key.K3);
+        sc.dump(Key.class, System.out);
+        sc = sc.remove(Key.K1);
+        sc.dump(Key.class, System.out);
+        sc = sc.remove(Key.K4);
+        sc.dump(Key.class, System.out);
+        sc = sc.remove(Key.K2);
+        sc.dump(Key.class, System.out);
+        return sc;
+    }
+
     public static void main(String[] args) {
         SoftCache<Key, String> sc = new SoftCache<>();
-        sc.dump(Key.values(), String.class, System.out);
-        sc = sc.put(Key.K1, "V1.a", "V1.b");
-        sc.dump(Key.values(), String.class, System.out);
-        sc = sc.put(Key.K4, "V4.a", "V4.b");
-        sc.dump(Key.values(), String.class, System.out);
-        sc = sc.put(Key.K2);
-        sc.dump(Key.values(), String.class, System.out);
-        sc = sc.put(Key.K3);
-        sc.dump(Key.values(), String.class, System.out);
-        sc = sc.put(Key.K1);
-        sc.dump(Key.values(), String.class, System.out);
-        sc = sc.put(Key.K2, "V2.a", "V2.b", "V2.c");
-        sc.dump(Key.values(), String.class, System.out);
+        sc = test(sc);
+        System.out.println("----");
+        sc = test(sc);
     }
 }
