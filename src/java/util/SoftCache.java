@@ -1,9 +1,8 @@
-package test;
+package java.util;
 
 import java.io.PrintStream;
 import java.lang.ref.SoftReference;
 import java.lang.reflect.Array;
-import java.util.*;
 
 /**
  * A compact immutable generic container of mappings {@code K -> V[]} where all {@code V}s are SoftReferenced and individual mapping can
