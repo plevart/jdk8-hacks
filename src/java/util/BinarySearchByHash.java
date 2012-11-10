@@ -27,7 +27,7 @@ public class BinarySearchByHash {
      * @param keyExtractor a mapper from values to corresponding keys
      * @param <V>          the type of values
      */
-    public static <K, V> void sortByKeyHash(V[] values, int fromIndex, int toIndex, Mapper<? extends K, ? super V> keyExtractor) {
+    public static <V> void sortByKeyHash(V[] values, int fromIndex, int toIndex, Mapper<?, ? super V> keyExtractor) {
         if (values.length > LINEAR_SEARCH_MAX_LENGTH) {
             Arrays.sort(
                 values,
