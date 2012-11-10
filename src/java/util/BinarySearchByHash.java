@@ -33,7 +33,7 @@ public class BinarySearchByHash {
                 values,
                 fromIndex,
                 toIndex,
-                new KeyHashOrder<K, V>(keyExtractor)
+                new KeyHashOrder<V>(keyExtractor)
             );
         }
     }
@@ -114,10 +114,10 @@ public class BinarySearchByHash {
         return -(low + 1);  // not found.
     }
 
-    private static class KeyHashOrder<K, V> implements Comparator<V> {
+    private static class KeyHashOrder<V> implements Comparator<V> {
         private final Mapper<?, ? super V> keyExtractor;
 
-        KeyHashOrder(Mapper<? extends K, ? super V> keyExtractor) {
+        KeyHashOrder(Mapper<?, ? super V> keyExtractor) {
             this.keyExtractor = keyExtractor;
         }
 
