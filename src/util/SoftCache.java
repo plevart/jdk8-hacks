@@ -1,8 +1,9 @@
-package java.util;
+package util;
 
 import java.io.PrintStream;
 import java.lang.ref.SoftReference;
 import java.lang.reflect.Array;
+import java.util.*;
 
 /**
  * A compact immutable generic container of mappings {@code K -> V[]} where all {@code V}s are SoftReferenced and individual mapping can
@@ -24,7 +25,7 @@ public class SoftCache<K extends Enum<K>, V> extends SoftReference<V[]> {
      * A constructor for SoftCache instance with a single mapping: {@code key -> values}
      *
      * @param key    the non {@code null} key
-     * @param values the non null values array
+     * @param values the non {@code null} values array
      */
     public SoftCache(K key, V... values) {
         this(offsetsFor(key), values.clone());
@@ -66,7 +67,11 @@ public class SoftCache<K extends Enum<K>, V> extends SoftReference<V[]> {
      * @return {@code true} if this instance contains no mappings (or has been cleared)
      */
     public boolean isEmpty() {
-        return super.get() == null;
+        V[] allValues = super.get();
+        if (offsets == null || super.get() == null) return true; // fresh empty or cleared instance
+        for(int i = 0; i < offsets.length; i++)
+            if (offsets[i] >= 0) return false; // contains a mapping
+        return true; // all mappings have been removed
     }
 
     /**
