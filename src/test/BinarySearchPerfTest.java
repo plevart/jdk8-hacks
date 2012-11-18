@@ -1,11 +1,16 @@
 package test;
 
-import java.lang.annotation.*;
+import util.BinaryMapArrayAccessor;
+import util.MapArrayAccessor;
+import util.Mapper;
+
+import java.lang.annotation.Annotation;
+import java.lang.annotation.Retention;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
-import util.Arrays2;
-import util.Mapper;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
  * A test to determine the size of array at which linear search by annotationType becomes slower that binary search by hash of annotationType
@@ -13,22 +18,82 @@ import util.Mapper;
 
 public class BinarySearchPerfTest {
 
-    @Target(ElementType.TYPE)
-    @Retention(RetentionPolicy.RUNTIME)
-    public @interface Ann1 {}
+    @Retention(RUNTIME) @interface A00 {}
+    @Retention(RUNTIME) @interface A01 {}
+    @Retention(RUNTIME) @interface A02 {}
+    @Retention(RUNTIME) @interface A03 {}
+    @Retention(RUNTIME) @interface A04 {}
+    @Retention(RUNTIME) @interface A05 {}
+    @Retention(RUNTIME) @interface A06 {}
+    @Retention(RUNTIME) @interface A07 {}
+    @Retention(RUNTIME) @interface A08 {}
+    @Retention(RUNTIME) @interface A09 {}
+    @Retention(RUNTIME) @interface A0A {}
+    @Retention(RUNTIME) @interface A0B {}
+    @Retention(RUNTIME) @interface A0C {}
+    @Retention(RUNTIME) @interface A0D {}
+    @Retention(RUNTIME) @interface A0E {}
+    @Retention(RUNTIME) @interface A0F {}
+    @Retention(RUNTIME) @interface A10 {}
+    @Retention(RUNTIME) @interface A11 {}
+    @Retention(RUNTIME) @interface A12 {}
+    @Retention(RUNTIME) @interface A13 {}
+    @Retention(RUNTIME) @interface A14 {}
+    @Retention(RUNTIME) @interface A15 {}
+    @Retention(RUNTIME) @interface A16 {}
+    @Retention(RUNTIME) @interface A17 {}
+    @Retention(RUNTIME) @interface A18 {}
+    @Retention(RUNTIME) @interface A19 {}
+    @Retention(RUNTIME) @interface A1A {}
+    @Retention(RUNTIME) @interface A1B {}
+    @Retention(RUNTIME) @interface A1C {}
+    @Retention(RUNTIME) @interface A1D {}
+    @Retention(RUNTIME) @interface A1E {}
+    @Retention(RUNTIME) @interface A1F {}
+    @Retention(RUNTIME) @interface A20 {}
+    @Retention(RUNTIME) @interface A21 {}
+    @Retention(RUNTIME) @interface A22 {}
+    @Retention(RUNTIME) @interface A23 {}
+    @Retention(RUNTIME) @interface A24 {}
+    @Retention(RUNTIME) @interface A25 {}
+    @Retention(RUNTIME) @interface A26 {}
+    @Retention(RUNTIME) @interface A27 {}
+    @Retention(RUNTIME) @interface A28 {}
+    @Retention(RUNTIME) @interface A29 {}
+    @Retention(RUNTIME) @interface A2A {}
+    @Retention(RUNTIME) @interface A2B {}
+    @Retention(RUNTIME) @interface A2C {}
+    @Retention(RUNTIME) @interface A2D {}
+    @Retention(RUNTIME) @interface A2E {}
+    @Retention(RUNTIME) @interface A2F {}
+    @Retention(RUNTIME) @interface A30 {}
+    @Retention(RUNTIME) @interface A31 {}
+    @Retention(RUNTIME) @interface A32 {}
+    @Retention(RUNTIME) @interface A33 {}
+    @Retention(RUNTIME) @interface A34 {}
+    @Retention(RUNTIME) @interface A35 {}
+    @Retention(RUNTIME) @interface A36 {}
+    @Retention(RUNTIME) @interface A37 {}
+    @Retention(RUNTIME) @interface A38 {}
+    @Retention(RUNTIME) @interface A39 {}
+    @Retention(RUNTIME) @interface A3A {}
+    @Retention(RUNTIME) @interface A3B {}
+    @Retention(RUNTIME) @interface A3C {}
+    @Retention(RUNTIME) @interface A3D {}
+    @Retention(RUNTIME) @interface A3E {}
+    @Retention(RUNTIME) @interface A3F {}
 
-    @Target(ElementType.TYPE)
-    @Retention(RetentionPolicy.RUNTIME)
-    public @interface Ann2 {}
+    @A00 @A01 @A02 @A03
+    static class C4 {}
 
-    @Target(ElementType.TYPE)
-    @Retention(RetentionPolicy.RUNTIME)
-    public @interface Ann3 {}
+    @A00 @A01 @A02 @A03 @A04 @A05 @A06 @A07 @A08 @A09 @A0A @A0B @A0C @A0D @A0E @A0F
+    static class C16 {}
 
-    @Ann1
-    @Ann2
-    @Ann3
-    static class Cls {}
+    @A00 @A01 @A02 @A03 @A04 @A05 @A06 @A07 @A08 @A09 @A0A @A0B @A0C @A0D @A0E @A0F
+    @A10 @A11 @A12 @A13 @A14 @A15 @A16 @A17 @A18 @A19 @A1A @A1B @A1C @A1D @A1E @A1F
+    @A20 @A21 @A22 @A23 @A24 @A25 @A26 @A27 @A28 @A29 @A2A @A2B @A2C @A2D @A2E @A2F
+    @A30 @A31 @A32 @A33 @A34 @A35 @A36 @A37 @A38 @A39 @A3A @A3B @A3C @A3D @A3E @A3F
+    static class C64 {}
 
     static final Mapper<Class<?>, Annotation> ANNOTATION_TYPE = new Mapper<Class<?>, Annotation>() {
         @Override
@@ -37,27 +102,21 @@ public class BinarySearchPerfTest {
         }
     };
 
-    static final int LOOP_SIZE = 100000;
+    static final int LOOP_SIZE = 5000000;
 
-    private static void testSearch(int arraySize) {
-        Annotation[] annotations = Cls.class.getAnnotations();
-        Arrays2.sortByKeyHash(annotations, ANNOTATION_TYPE);
+    private static void testSearch(Class<?> clazz) {
 
-        // make test arrays - each array has an element to be found (annotations[1]) at a particular index (each index is tried),
-        // preceded by elements that are smaller (annotations[0]) and followed by elements that are larger (annotations[2]).
-        Annotation[][] testArrays = new Annotation[arraySize][arraySize];
-        for (int i = 0; i < arraySize; i++) {
-            for (int j = 0; j < arraySize; j++) {
-                testArrays[i][j] = j < i ? annotations[0] : (j > i ? annotations[2] : annotations[1]);
-            }
-        }
+        Annotation[] annotations = clazz.getAnnotations();
 
-        // make a comparison test map with 3 entries
-        Map<Class<?>, Annotation> testMap = new HashMap<>();
+        Map<Class<? extends Annotation>, Annotation> map = new HashMap<>();
         for (Annotation a : annotations)
-            testMap.put(a.annotationType(), a);
+            map.put(a.annotationType(), a);
 
-        Class<?> searchAnnotationType = annotations[1].annotationType();
+        Class<?>[] annotationTypes = map.keySet().toArray(new Class[map.size()]);
+
+        Object[] binaryArray = MapArrayAccessor.BINARY.toArray(map);
+        Object[] hashArray = MapArrayAccessor.HASH.toArray(map);
+
 
         System.gc();
         System.gc();
@@ -69,53 +128,57 @@ public class BinarySearchPerfTest {
 
         long t0 = System.nanoTime();
         for (int n = 0; n < LOOP_SIZE; n++) {
-            for (int i = 0; i < arraySize; i++) {
-                Annotation foundAnn = Arrays2.findAnyLinear(testArrays[i], 0, arraySize, ANNOTATION_TYPE, searchAnnotationType);
-                assert foundAnn != null;
+            for (Class<?> annotationType : annotationTypes) {
+                Annotation foundAnn = map.get(annotationType);
+                Objects.requireNonNull(foundAnn);
             }
-        }
-        // the work to be done is arraySize^2 so to be fair we divide - take the mean
-        long tl = (System.nanoTime() - t0) / (long) (arraySize == 0 ? 1 : arraySize);
-        System.out.println(
-            " Linear search, arraySize=" + arraySize +
-            ": " + tl + " ns (" + ((double) tl / (double) LOOP_SIZE) + " ns/lookup)"
-        );
-
-        t0 = System.nanoTime();
-        for (int n = 0; n < LOOP_SIZE; n++) {
-            for (int i = 0; i < arraySize; i++) {
-                Annotation foundAnn = Arrays2.findAnyBinaryByKeyHash(testArrays[i], 0, arraySize, ANNOTATION_TYPE, searchAnnotationType);
-                assert foundAnn != null;
-            }
-        }
-        // the work to be done is arraySize^2 so to be fair we divide - take the mean
-        long tb = (System.nanoTime() - t0) / (long) (arraySize == 0 ? 1 : arraySize);
-        System.out.println(
-            " Binary search, arraySize=" + arraySize +
-            ": " + tb + " ns (" + ((double) tb / (double) LOOP_SIZE) + " ns/lookup)" +
-            " - " + (tl < tb ? "LINEAR" : "BINARY") + " wins");
-
-        t0 = System.nanoTime();
-        for (int n = 0; n < LOOP_SIZE; n++) {
-            Annotation foundAnn = testMap.get(searchAnnotationType);
-            assert foundAnn != null;
         }
         long th = System.nanoTime() - t0;
         System.out.println(
-            "HashMap lookup, arraySize=" + arraySize +
-            ": " + th + " ns (" + ((double) th / (double) LOOP_SIZE) + " ns/lookup)\n"
+            "              HashMap, map.size=" + map.size() +
+                ": " + th + " ns (" + ((double) th / (double) LOOP_SIZE / (double) annotationTypes.length) + " ns/lookup)"
         );
 
+        t0 = System.nanoTime();
+        for (int n = 0; n < LOOP_SIZE; n++) {
+            for (Class<?> annotationType : annotationTypes) {
+                Annotation foundAnn = MapArrayAccessor.BINARY.get(binaryArray, annotationType);
+                Objects.requireNonNull(foundAnn);
+            }
+        }
+        long tba = System.nanoTime() - t0;
+        System.out.println(
+            "BinaryMapArrayAccessor, array.length=" + binaryArray.length +
+                ": " + tba + " ns (" + ((double) tba / (double) LOOP_SIZE / (double) annotationTypes.length) + " ns/lookup)"
+        );
+
+        t0 = System.nanoTime();
+        for (int n = 0; n < LOOP_SIZE; n++) {
+            for (Class<?> annotationType : annotationTypes) {
+                Annotation foundAnn = MapArrayAccessor.HASH.get(hashArray, annotationType);
+                Objects.requireNonNull(foundAnn);
+            }
+        }
+        long tha = System.nanoTime() - t0;
+        System.out.println(
+            "  HashMapArrayAccessor, array.length=" + hashArray.length +
+                ": " + tha + " ns (" + ((double) tha / (double) LOOP_SIZE / (double) annotationTypes.length) + " ns/lookup)"
+        );
+
+        System.out.println();
     }
 
     public static void main(String[] args) {
         System.out.println("warm-up:");
-        testSearch(30);
-        testSearch(30);
-        testSearch(30);
-        testSearch(100);
+        testSearch(C4.class);
+        testSearch(C16.class);
+        testSearch(C64.class);
+        testSearch(C4.class);
+        testSearch(C16.class);
+        testSearch(C64.class);
         System.out.println("measure:");
-        for (int n = 0; n < 50; n++)
-            testSearch(n);
+        testSearch(C4.class);
+        testSearch(C16.class);
+        testSearch(C64.class);
     }
 }

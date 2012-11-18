@@ -2219,7 +2219,7 @@ public final
         volatile Field[] declaredPublicFields;
         volatile Method[] declaredPublicMethods;
         // Annotations
-        volatile Annotation[] annotations;
+        volatile Map<Class<? extends Annotation>, Annotation> annotations;
         volatile Annotation[] declaredAnnotations;
         // Value of classRedefinedCount when we created this VolatileData instance
         final int redefinedCount;
@@ -3039,70 +3039,15 @@ public final
             throw new ClassCastException(this.toString());
     }
 
-    private static final int ANNOTATION_LINEAR_SEARCH_MAX_LENGTH = 6;
-
-    private static final Comparator<Object> ANNOTATION_TYPE_HASH_ORDER = new Comparator<Object>() {
-        @Override
-        public int compare(Object o1, Object o2) {
-            int hash1 = o1 instanceof Integer ? (Integer) o1 : ((Annotation) o1).annotationType().hashCode();
-            int hash2 = o2 instanceof Integer ? (Integer) o2 : ((Annotation) o2).annotationType().hashCode();
-            return hash1 - hash2;
-        }
-    };
-
     /**
      * @throws NullPointerException {@inheritDoc}
      * @since 1.5
      */
-    @SuppressWarnings("unchecked")
     public <A extends Annotation> A getAnnotation(Class<A> annotationClass) {
         if (annotationClass == null)
             throw new NullPointerException();
 
-        Annotation[] annotations = privateGetAnnotations(false);
-
-        // linear search for small arrays
-        if (annotations.length <= ANNOTATION_LINEAR_SEARCH_MAX_LENGTH) {
-            for (Annotation annotation : annotations) {
-                if (annotation.annotationType() == annotationClass) {
-                    return annotationClass.cast(annotation);
-                }
-            }
-        }
-        else {
-            // binary search by hash for large arrays
-            int annotationTypeHash = annotationClass.hashCode();
-
-            // pin-point the candidate by hash
-            int i = Arrays.binarySearch(annotations, annotationTypeHash, ANNOTATION_TYPE_HASH_ORDER);
-
-            // no match by hashCode -> no match at all
-            if (i < 0)
-                return null;
-
-            // we have a potential match -> search the neighborhood with common hashCode
-            // from i backwards
-            for (int j = i; j >= 0; j--) {
-                Annotation annotation = annotations[j];
-                Class<?> annType = annotation.annotationType();
-                if (annType == annotationClass)
-                    return annotationClass.cast(annotation);
-                if (annType.hashCode() != annotationTypeHash)
-                    break;
-            }
-            // from i+1 forwards
-            for (int j = i+1; j < annotations.length; j++) {
-                Annotation annotation = annotations[j];
-                Class<?> annType = annotation.annotationType();
-                if (annType == annotationClass)
-                    return annotationClass.cast(annotation);
-                if (annType.hashCode() != annotationTypeHash)
-                    break;
-            }
-        }
-
-        // no match
-        return null;
+        return annotationClass.cast(privateGetAnnotations().get(annotationClass));
     }
 
     /**
@@ -3122,55 +3067,63 @@ public final
      * @since 1.5
      */
     public Annotation[] getAnnotations() {
-        return privateGetAnnotations(false).clone();
+        return AnnotationParser.toArray(privateGetAnnotations());
     }
 
     /**
      * @since 1.5
      */
     public Annotation[] getDeclaredAnnotations()  {
-        return privateGetAnnotations(true).clone();
+        return privateGetDeclaredAnnotations(volatileData()).clone();
     }
 
-
-    private Annotation[] privateGetAnnotations(boolean declaredOnly) {
-        Annotation[] res;
-        VolatileData<T> vd = volatileData();
+    private Annotation[] privateGetDeclaredAnnotations(VolatileData<T> vd) {
+        Annotation[] declaredAnnotations;
         if (vd != null) {
-            res = declaredOnly ? vd.declaredAnnotations : vd.annotations;
-            if (res != null) return res;
+            declaredAnnotations = vd.declaredAnnotations;
+            if (declaredAnnotations != null) return declaredAnnotations;
         }
 
         Map<Class<? extends Annotation>, Annotation> declaredAnnotationsMap = AnnotationParser.parseAnnotations(
             getRawAnnotations(), getConstantPool(), this
         );
-        Annotation[] declaredAnnotations = AnnotationParser.toArray(declaredAnnotationsMap);
-        Annotation[] annotations;
-        Class<?> superClass = getSuperclass();
-        if (superClass == null) {
-            annotations = declaredAnnotations;
-        } else {
-            Map<Class<? extends Annotation>, Annotation> annotationsMap = new HashMap<>();
-            for (Annotation ann : superClass.privateGetAnnotations(false)) {
-                Class<? extends Annotation> annotationClass = ann.annotationType();
-                if (AnnotationType.getInstance(annotationClass).isInherited())
-                    annotationsMap.put(annotationClass, ann);
-            }
-            annotationsMap.putAll(declaredAnnotationsMap);
-            annotations = AnnotationParser.toArray(annotationsMap);
-        }
-
-        // sort annotations array for later quick retrieval
-        if (annotations.length > ANNOTATION_LINEAR_SEARCH_MAX_LENGTH) {
-            Arrays.sort(annotations, ANNOTATION_TYPE_HASH_ORDER);
-        }
+        declaredAnnotations = AnnotationParser.toArray(declaredAnnotationsMap);
 
         if (vd != null) {
             vd.declaredAnnotations = declaredAnnotations;
+        }
+
+        return declaredAnnotations;
+    }
+
+    private Map<Class<? extends Annotation>, Annotation> privateGetAnnotations() {
+        Map<Class<? extends Annotation>, Annotation> annotations;
+        VolatileData<T> vd = volatileData();
+        if (vd != null) {
+            annotations = vd.annotations;
+            if (annotations != null) return annotations;
+        }
+
+        annotations = new HashMap<>();
+        Class<?> superClass = getSuperclass();
+        // fill-in inherited
+        if (superClass != null) {
+            for (Map.Entry<Class<? extends Annotation>, Annotation> entry : superClass.privateGetAnnotations().entrySet()) {
+                Class<? extends Annotation> annotationClass = entry.getKey();
+                if (AnnotationType.getInstance(annotationClass).isInherited())
+                    annotations.put(annotationClass, entry.getValue());
+            }
+        }
+        // override with declared
+        for (Annotation ann : privateGetDeclaredAnnotations(vd)) {
+            annotations.put(ann.annotationType(), ann);
+        }
+
+        if (vd != null) {
             vd.annotations = annotations;
         }
 
-        return declaredOnly ? declaredAnnotations : annotations;
+        return annotations;
     }
 
     // Annotation types cache their internal (AnnotationType) form
