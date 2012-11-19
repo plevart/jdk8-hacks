@@ -104,6 +104,17 @@ public class BinarySearchPerfTest {
 
     static final int LOOP_SIZE = 5000000;
 
+    private static final A00 FAKE_ANNOTATION = new A00() {
+        @Override
+        public Class<? extends Annotation> annotationType() {
+            return A00.class;
+        }
+    };
+
+    private static Annotation getFakeAnnotation(Class<?> clazz) {
+        return FAKE_ANNOTATION;
+    }
+
     private static void testSearch(Class<?> clazz) {
 
         Annotation[] annotations = clazz.getAnnotations();
@@ -129,13 +140,26 @@ public class BinarySearchPerfTest {
         long t0 = System.nanoTime();
         for (int n = 0; n < LOOP_SIZE; n++) {
             for (Class<?> annotationType : annotationTypes) {
+                Annotation foundAnn = getFakeAnnotation(annotationType);
+                Objects.requireNonNull(foundAnn);
+            }
+        }
+        long tf = System.nanoTime() - t0;
+        System.out.println(
+            "       FakeEmptyLookup" +
+            ": " + tf + " ns (" + ((double) tf / (double) LOOP_SIZE / (double) annotationTypes.length) + " ns/lookup)"
+        );
+
+        t0 = System.nanoTime();
+        for (int n = 0; n < LOOP_SIZE; n++) {
+            for (Class<?> annotationType : annotationTypes) {
                 Annotation foundAnn = map.get(annotationType);
                 Objects.requireNonNull(foundAnn);
             }
         }
         long th = System.nanoTime() - t0;
         System.out.println(
-            "              HashMap, map.size=" + map.size() +
+            "               HashMap, map.size=" + map.size() +
                 ": " + th + " ns (" + ((double) th / (double) LOOP_SIZE / (double) annotationTypes.length) + " ns/lookup)"
         );
 
