@@ -997,7 +997,7 @@ class Field extends AccessibleObject implements Member {
                     dimensions++;
                     cl = cl.getComponentType();
                 }
-                StringBuffer sb = new StringBuffer();
+                StringBuilder sb = new StringBuilder(cl.getName().length() + dimensions + dimensions);
                 sb.append(cl.getName());
                 for (int i = 0; i < dimensions; i++) {
                     sb.append("[]");

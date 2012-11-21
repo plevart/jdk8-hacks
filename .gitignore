@@ -3,4 +3,6 @@
 *.ipr
 *.iws
 .idea
+.mavenrc.override
 out
+target
