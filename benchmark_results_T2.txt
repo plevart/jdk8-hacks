@@ -1,0 +1,76 @@
+Executing: /app/jdk1.8.0/bin/sparcv9/java -Xmx4G -cp jdk8-hacks-1.0-SNAPSHOT.jar test.ReflectionTest
+
+
+warm-up:
+Test1:   1 concurrent threads *     20000 loops each:     112,775.635 ms
+Test1:   1 concurrent threads *     20000 loops each:     110,407.826 ms (x   0.98)
+Test1:   1 concurrent threads *     20000 loops each:     110,930.973 ms (x   0.98)
+
+Test2:   1 concurrent threads *   2000000 loops each:      13,175.869 ms
+Test2:   1 concurrent threads *   2000000 loops each:      12,085.134 ms (x   0.92)
+Test2:   1 concurrent threads *   2000000 loops each:      11,798.514 ms (x   0.90)
+
+Test3:   1 concurrent threads *  10000000 loops each:      17,496.198 ms
+Test3:   1 concurrent threads *  10000000 loops each:      16,922.239 ms (x   0.97)
+Test3:   1 concurrent threads *  10000000 loops each:      16,770.774 ms (x   0.96)
+
+measure:
+Test1:   1 concurrent threads *     20000 loops each:     110,697.350 ms
+Test1:   2 concurrent threads *     20000 loops each:     111,804.504 ms (x   1.01)
+Test1:   4 concurrent threads *     20000 loops each:     111,069.935 ms (x   1.00)
+Test1:   8 concurrent threads *     20000 loops each:     113,275.102 ms (x   1.02)
+Test1:  32 concurrent threads *     20000 loops each:     260,656.276 ms (x   2.35)
+Test1: 128 concurrent threads *     20000 loops each:   1,409,046.530 ms (x  12.73)
+
+Test2:   1 concurrent threads *   2000000 loops each:      11,767.382 ms
+Test2:   2 concurrent threads *   2000000 loops each:      11,222.198 ms (x   0.95)
+Test2:   4 concurrent threads *   2000000 loops each:      11,808.394 ms (x   1.00)
+Test2:   8 concurrent threads *   2000000 loops each:      42,013.915 ms (x   3.57)
+Test2:  32 concurrent threads *   2000000 loops each:     175,018.860 ms (x  14.87)
+Test2: 128 concurrent threads *   2000000 loops each:     865,834.888 ms (x  73.58)
+
+Test3:   1 concurrent threads *  10000000 loops each:      16,763.301 ms
+Test3:   2 concurrent threads *  10000000 loops each:      14,201.868 ms (x   0.85)
+Test3:   4 concurrent threads *  10000000 loops each:      33,744.607 ms (x   2.01)
+Test3:   8 concurrent threads *  10000000 loops each:     150,099.787 ms (x   8.95)
+Test3:  32 concurrent threads *  10000000 loops each:     607,254.067 ms (x  36.23)
+Test3: 128 concurrent threads *  10000000 loops each:   2,502,747.007 ms (x 149.30)
+
+
+Executing: /app/jdk1.8.0/bin/sparcv9/java -Xbootclasspath/p:jdk8-hacks-1.0-SNAPSHOT.jar -Xmx4G -cp jdk8-hacks-1.0-SNAPSHOT.jar test.ReflectionTest
+
+
+warm-up:
+Test1:   1 concurrent threads *     20000 loops each:       2,524.654 ms
+Test1:   1 concurrent threads *     20000 loops each:       2,043.467 ms (x   0.81)
+Test1:   1 concurrent threads *     20000 loops each:       2,013.806 ms (x   0.80)
+
+Test2:   1 concurrent threads *   2000000 loops each:      11,770.634 ms
+Test2:   1 concurrent threads *   2000000 loops each:      11,305.366 ms (x   0.96)
+Test2:   1 concurrent threads *   2000000 loops each:      11,319.748 ms (x   0.96)
+
+Test3:   1 concurrent threads *  10000000 loops each:      15,178.111 ms
+Test3:   1 concurrent threads *  10000000 loops each:      14,597.460 ms (x   0.96)
+Test3:   1 concurrent threads *  10000000 loops each:      14,528.580 ms (x   0.96)
+
+measure:
+Test1:   1 concurrent threads *     20000 loops each:       1,573.854 ms
+Test1:   2 concurrent threads *     20000 loops each:       1,575.896 ms (x   1.00)
+Test1:   4 concurrent threads *     20000 loops each:       1,428.045 ms (x   0.91)
+Test1:   8 concurrent threads *     20000 loops each:         598.331 ms (x   0.38)
+Test1:  32 concurrent threads *     20000 loops each:         998.649 ms (x   0.63)
+Test1: 128 concurrent threads *     20000 loops each:       2,441.999 ms (x   1.55)
+
+Test2:   1 concurrent threads *   2000000 loops each:      11,306.081 ms
+Test2:   2 concurrent threads *   2000000 loops each:      12,076.996 ms (x   1.07)
+Test2:   4 concurrent threads *   2000000 loops each:      12,192.500 ms (x   1.08)
+Test2:   8 concurrent threads *   2000000 loops each:      12,748.237 ms (x   1.13)
+Test2:  32 concurrent threads *   2000000 loops each:      18,182.255 ms (x   1.61)
+Test2: 128 concurrent threads *   2000000 loops each:      59,234.490 ms (x   5.24)
+
+Test3:   1 concurrent threads *  10000000 loops each:      14,510.912 ms
+Test3:   2 concurrent threads *  10000000 loops each:      15,562.266 ms (x   1.07)
+Test3:   4 concurrent threads *  10000000 loops each:      15,591.584 ms (x   1.07)
+Test3:   8 concurrent threads *  10000000 loops each:      15,930.644 ms (x   1.10)
+Test3:  32 concurrent threads *  10000000 loops each:      22,834.255 ms (x   1.57)
+Test3: 128 concurrent threads *  10000000 loops each:      74,808.079 ms (x   5.16)

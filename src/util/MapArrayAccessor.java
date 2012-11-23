@@ -8,6 +8,7 @@ public interface MapArrayAccessor {
 
     MapArrayAccessor BINARY = new BinaryMapArrayAccessor();
     MapArrayAccessor HASH = new HashMapArrayAccessor();
+    MapArrayAccessor HASH4 = new HashMapArrayAccessor4();
 
     int getArrayLength(Map<?, ?> map);
 

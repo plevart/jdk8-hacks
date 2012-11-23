@@ -84,13 +84,6 @@ public class HashMapArrayAccessor extends AbstractMapArrayAccessor {
     }
 
     /**
-     * Retrieve object hash code.
-     */
-    private static int hash0(Object k) {
-        return k.hashCode();
-    }
-
-    /**
      * Retrieve object hash code and applies a supplemental hash function to the
      * result hash, which defends against poor quality hash functions.
      */

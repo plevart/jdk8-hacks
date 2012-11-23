@@ -16,7 +16,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  * A test to determine the size of array at which linear search by annotationType becomes slower that binary search by hash of annotationType
  */
 
-public class BinarySearchPerfTest {
+public class SearchPerfTest {
 
     @Retention(RUNTIME) @interface A00 {}
     @Retention(RUNTIME) @interface A01 {}
@@ -127,6 +127,7 @@ public class BinarySearchPerfTest {
 
         Object[] binaryArray = MapArrayAccessor.BINARY.toArray(map);
         Object[] hashArray = MapArrayAccessor.HASH.toArray(map);
+        Object[] hashArray4 = MapArrayAccessor.HASH4.toArray(map);
 
 
         System.gc();
@@ -177,17 +178,32 @@ public class BinarySearchPerfTest {
         );
 
         t0 = System.nanoTime();
-        for (int n = 0; n < LOOP_SIZE; n++) {
-            for (Class<?> annotationType : annotationTypes) {
+        for (int n = 0; n < LOOP_SIZE; n++)
+        {
+            for (Class<?> annotationType : annotationTypes)
+            {
                 Annotation foundAnn = MapArrayAccessor.HASH.get(hashArray, annotationType);
                 Objects.requireNonNull(foundAnn);
             }
         }
         long tha = System.nanoTime() - t0;
         System.out.println(
-            "  HashMapArrayAccessor, array.length=" + hashArray.length +
-                ": " + tha + " ns (" + ((double) tha / (double) LOOP_SIZE / (double) annotationTypes.length) + " ns/lookup)"
-        );
+                "  HashMapArrayAccessor, array.length=" + hashArray.length
+                + ": " + tha + " ns (" + ((double) tha / (double) LOOP_SIZE / (double) annotationTypes.length) + " ns/lookup)");
+
+        t0 = System.nanoTime();
+        for (int n = 0; n < LOOP_SIZE; n++)
+        {
+            for (Class<?> annotationType : annotationTypes)
+            {
+                Annotation foundAnn = MapArrayAccessor.HASH4.get(hashArray4, annotationType);
+                Objects.requireNonNull(foundAnn);
+            }
+        }
+        long tha4 = System.nanoTime() - t0;
+        System.out.println(
+                "  HashMapArrayAccessor4, array.length=" + hashArray4.length
+                + ": " + tha4 + " ns (" + ((double) tha4 / (double) LOOP_SIZE / (double) annotationTypes.length) + " ns/lookup)");
 
         System.out.println();
     }
