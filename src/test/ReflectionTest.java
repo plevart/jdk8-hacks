@@ -2,6 +2,7 @@ package test;
 
 import java.io.IOException;
 import java.lang.annotation.*;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Objects;
@@ -9,140 +10,255 @@ import java.util.Objects;
 public class ReflectionTest
 {
     @Retention(RetentionPolicy.RUNTIME)
-    @Target(
-    {
-        ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.CONSTRUCTOR
-    })
     @Inherited
-    public @interface InheritedAnnotation
+    public @interface InheritedAnn
     {
         String value();
     }
 
     @Retention(RetentionPolicy.RUNTIME)
-    @Target(
-    {
-        ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.CONSTRUCTOR
-    })
-    public @interface NoninheritedAnnotation
+    public @interface Ann1
     {
         String value();
     }
 
-    @InheritedAnnotation("A")
-    @NoninheritedAnnotation("A")
+    @Retention(RetentionPolicy.RUNTIME)
+    public @interface Ann2
+    {
+        String value();
+    }
+
+    @Retention(RetentionPolicy.RUNTIME)
+    public @interface Ann3
+    {
+        String value();
+    }
+
+    @Retention(RetentionPolicy.RUNTIME)
+    public @interface Ann4
+    {
+        String value();
+    }
+
+    @Retention(RetentionPolicy.RUNTIME)
+    public @interface Ann5
+    {
+        String value();
+    }
+
+    @InheritedAnn("A")
+    @Ann1("A")
+    @Ann2("A")
+    @Ann3("A")
+    @Ann4("A")
+    @Ann5("A")
     public static class ClassA
     {
-        @InheritedAnnotation("A.f1")
-        @NoninheritedAnnotation("A.f1")
+        @Ann1("A.f1")
+        @Ann2("A.f1")
+        @Ann3("A.f1")
+        @Ann4("A.f1")
+        @Ann5("A.f1")
         public String f1;
 
-        @InheritedAnnotation("A.m1")
-        @NoninheritedAnnotation("A.m1")
+        @Ann1("A.<init>")
+        @Ann2("A.<init>")
+        @Ann3("A.<init>")
+        @Ann4("A.<init>")
+        @Ann5("A.<init>")
+        public ClassA()
+        {
+        }
+
+        @Ann1("A.m1")
+        @Ann2("A.m1")
+        @Ann3("A.m1")
+        @Ann4("A.m1")
+        @Ann5("A.m1")
         public void m1()
         {
         }
 
-        @InheritedAnnotation("A.m2")
-        @NoninheritedAnnotation("A.m2")
+        @Ann1("A.m2")
+        @Ann2("A.m2")
+        @Ann3("A.m2")
+        @Ann4("A.m2")
+        @Ann5("A.m2")
         public void m2()
         {
         }
     }
 
+    @Ann1("B")
+    @Ann2("B")
+    @Ann3("B")
+    @Ann4("B")
+    @Ann5("B")
     public static class ClassB extends ClassA
     {
-        @InheritedAnnotation("B.f1")
-        @NoninheritedAnnotation("B.f1")
+        @Ann1("B.f1")
+        @Ann2("B.f1")
+        @Ann3("B.f1")
+        @Ann4("B.f1")
+        @Ann5("B.f1")
         public String f1;
 
-        @Override
-        public void m1()
+        @Ann1("B.<init>")
+        @Ann2("B.<init>")
+        @Ann3("B.<init>")
+        @Ann4("B.<init>")
+        @Ann5("B.<init>")
+        public ClassB()
         {
-            super.m1();
         }
 
-        @Override
+        @Ann1("B.m1")
+        @Ann2("B.m1")
+        @Ann3("B.m1")
+        @Ann4("B.m1")
+        @Ann5("B.m1")
+        public void m1()
+        {
+        }
+
+        @Ann1("B.m2")
+        @Ann2("B.m2")
+        @Ann3("B.m2")
+        @Ann4("B.m2")
+        @Ann5("B.m2")
         public void m2()
         {
-            super.m2();
         }
     }
 
-    @InheritedAnnotation("C")
-    @NoninheritedAnnotation("C")
+    @Ann1("C")
+    @Ann2("C")
+    @Ann3("C")
+    @Ann4("C")
+    @Ann5("C")
     public static class ClassC extends ClassB
     {
-        @InheritedAnnotation("C.m1")
-        @NoninheritedAnnotation("C.m1")
-        @Override
-        public void m1()
+        @Ann1("C.f1")
+        @Ann2("C.f1")
+        @Ann3("C.f1")
+        @Ann4("C.f1")
+        @Ann5("C.f1")
+        public String f1;
+
+        @Ann1("C.<init>")
+        @Ann2("C.<init>")
+        @Ann3("C.<init>")
+        @Ann4("C.<init>")
+        @Ann5("C.<init>")
+        public ClassC()
         {
-            super.m1();
         }
 
-        @Override
+        @Ann1("C.m1")
+        @Ann2("C.m1")
+        @Ann3("C.m1")
+        @Ann4("C.m1")
+        @Ann5("C.m1")
+        public void m1()
+        {
+        }
+
+        @Ann1("C.m2")
+        @Ann2("C.m2")
+        @Ann3("C.m2")
+        @Ann4("C.m2")
+        @Ann5("C.m2")
         public void m2()
         {
-            super.m2();
         }
     }
 
-    static void dump(Annotation[] annotations, String prefix, Appendable sb) throws IOException
+    static void dump(Annotation[] annotations, String prefix, Appendable sb) throws Exception
     {
         for (Annotation ann : annotations)
         {
-            String value = ann instanceof NoninheritedAnnotation ? ((NoninheritedAnnotation) ann).value() : ((InheritedAnnotation) ann).value();
+            String value = (String) ann.annotationType().getMethod("value", new Class[0]).invoke(ann, (Object[]) null);
             sb.append(prefix).append("@").append(ann.annotationType().getName()).append("(\"").append(value).append("\")\n");
         }
     }
 
-    static void dump(Class<?> clazz, Field[] fields, Method[] methods, Appendable sb) throws IOException
+    static void dump(Class<?> clazz, Field[] fields, Constructor[] constructors, Method[] methods, Appendable sb)
     {
-
-        dump(clazz.getAnnotations(), "", sb);
-        sb.append("class ").append(clazz.getName()).append(" {\n\n");
-
-        if (fields != null)
+        try
         {
-            for (Field f : fields)
-            {
-                dump(f.getAnnotations(), "  ", sb);
-                sb.append("  ").append(f.toGenericString()).append(";\n\n");
-            }
-        }
+            dump(clazz.getAnnotations(), "", sb);
+            sb.append("class ").append(clazz.getName()).append(" {\n\n");
 
-        if (methods != null)
+            if (fields != null)
+            {
+                for (Field f : fields)
+                {
+                    dump(f.getAnnotations(), "  ", sb);
+                    sb.append("  ").append(f.toGenericString()).append(";\n\n");
+                }
+            }
+
+            if (methods != null)
+            {
+                for (Constructor c : constructors)
+                {
+                    dump(c.getAnnotations(), "  ", sb);
+                    sb.append("  ").append(c.toGenericString()).append(";\n\n");
+                }
+            }
+
+            if (methods != null)
+            {
+                for (Method m : methods)
+                {
+                    dump(m.getAnnotations(), "  ", sb);
+                    sb.append("  ").append(m.toGenericString()).append(";\n\n");
+                }
+            }
+
+            sb.append("}\n\n");
+        }
+        catch (Exception e)
         {
-            for (Method m : methods)
-            {
-                dump(m.getAnnotations(), "  ", sb);
-                sb.append("  ").append(m.toGenericString()).append(";\n\n");
-            }
+            throw new RuntimeException(e.getMessage(), e);
         }
-
-        sb.append("}\n\n");
     }
-    static final Appendable NOOP_APPENDABLE = new Appendable()
+
+    static final Object NOT_ANNOTATION = new Object();
+    
+    static void test(Annotation ann)
     {
-        @Override
-        public Appendable append(CharSequence csq)
+        if (ann == NOT_ANNOTATION) {
+            throw new AssertionError();
+        }
+    }
+    
+    static void test(Class<?> clazz)
+    {
+        test(clazz.getAnnotation(InheritedAnn.class));
+        test(clazz.getAnnotation(Ann1.class));
+    }
+
+    static void test(Class<?> clazz, Field[] fields, Constructor[] constructors, Method[] methods)
+    {
+        test(clazz);
+
+        for (Field f : fields)
         {
-            return this;
+            test(f.getAnnotation(Ann1.class));
         }
 
-        @Override
-        public Appendable append(CharSequence csq, int start, int end)
+
+        for (Constructor c : constructors)
         {
-            return this;
+            test(c.getAnnotation(Ann1.class));
         }
 
-        @Override
-        public Appendable append(char c)
+        for (Method m : methods)
         {
-            return this;
+            test(m.getAnnotation(Ann1.class));
         }
-    };
+    }
 
     static class Test1 extends Thread
     {
@@ -156,17 +272,11 @@ public class ReflectionTest
         @Override
         public void run()
         {
-            try
+            for (int i = 0; i < loops; i++)
             {
-                for (int i = 0; i < loops; i++)
-                {
-                    dump(ClassA.class, ClassA.class.getFields(), ClassA.class.getMethods(), NOOP_APPENDABLE);
-                    dump(ClassB.class, ClassB.class.getFields(), ClassB.class.getMethods(), NOOP_APPENDABLE);
-                    dump(ClassC.class, ClassC.class.getFields(), ClassC.class.getMethods(), NOOP_APPENDABLE);
-                }
-            }
-            catch (IOException e)
-            {
+                test(ClassA.class, ClassA.class.getFields(), ClassA.class.getConstructors(), ClassA.class.getMethods());
+                test(ClassB.class, ClassB.class.getFields(), ClassB.class.getConstructors(), ClassB.class.getMethods());
+                test(ClassC.class, ClassC.class.getFields(), ClassC.class.getConstructors(), ClassC.class.getMethods());
             }
         }
     }
@@ -183,24 +293,23 @@ public class ReflectionTest
         @Override
         public void run()
         {
-            try
-            {
-                Field[] classAfields = ClassA.class.getFields();
-                Method[] classAmethods = ClassA.class.getMethods();
-                Field[] classBfields = ClassB.class.getFields();
-                Method[] classBmethods = ClassB.class.getMethods();
-                Field[] classCfields = ClassC.class.getFields();
-                Method[] classCmethods = ClassC.class.getMethods();
+            Field[] classAfields = ClassA.class.getFields();
+            Constructor[] classAconstructors = ClassA.class.getConstructors();
+            Method[] classAmethods = ClassA.class.getMethods();
 
-                for (int i = 0; i < loops; i++)
-                {
-                    dump(ClassA.class, classAfields, classAmethods, NOOP_APPENDABLE);
-                    dump(ClassB.class, classBfields, classBmethods, NOOP_APPENDABLE);
-                    dump(ClassC.class, classCfields, classCmethods, NOOP_APPENDABLE);
-                }
-            }
-            catch (IOException e)
+            Field[] classBfields = ClassB.class.getFields();
+            Constructor[] classBconstructors = ClassB.class.getConstructors();
+            Method[] classBmethods = ClassB.class.getMethods();
+
+            Field[] classCfields = ClassC.class.getFields();
+            Constructor[] classCconstructors = ClassC.class.getConstructors();
+            Method[] classCmethods = ClassC.class.getMethods();
+
+            for (int i = 0; i < loops; i++)
             {
+                test(ClassA.class, classAfields, classAconstructors, classAmethods);
+                test(ClassB.class, classBfields, classBconstructors, classBmethods);
+                test(ClassC.class, classCfields, classCconstructors, classCmethods);
             }
         }
     }
@@ -219,9 +328,9 @@ public class ReflectionTest
         {
             for (int i = 0; i < loops; i++)
             {
-                Objects.requireNonNull(ClassC.class.getAnnotation(InheritedAnnotation.class));
-                Objects.requireNonNull(ClassA.class.getAnnotation(InheritedAnnotation.class));
-                Objects.requireNonNull(ClassB.class.getAnnotation(InheritedAnnotation.class));
+                test(ClassA.class);
+                test(ClassB.class);
+                test(ClassC.class);
             }
         }
     }
@@ -229,15 +338,10 @@ public class ReflectionTest
     static void testCorrectness()
     {
         StringBuilder sb = new StringBuilder();
-        try
-        {
-            dump(ClassA.class, ClassA.class.getFields(), ClassA.class.getMethods(), sb);
-            dump(ClassB.class, ClassB.class.getFields(), ClassB.class.getMethods(), sb);
-            dump(ClassC.class, ClassC.class.getFields(), ClassC.class.getMethods(), sb);
-        }
-        catch (IOException e)
-        {
-        }
+        dump(ClassA.class, ClassA.class.getFields(), ClassA.class.getConstructors(), ClassA.class.getMethods(), sb);
+        dump(ClassB.class, ClassB.class.getFields(), ClassB.class.getConstructors(), ClassB.class.getMethods(), sb);
+        dump(ClassC.class, ClassC.class.getFields(), ClassC.class.getConstructors(), ClassC.class.getMethods(), sb);
+
         System.out.println(sb);
     }
 
@@ -325,15 +429,17 @@ public class ReflectionTest
 
     public static void main(String[] args) throws IOException
     {
+        System.out.println();
+
         long t;
         System.out.println("warm-up:");
         t = test1(1, 20000, 0L);
         test1(1, 20000, t);
         test1(1, 20000, t);
         System.out.println();
-        t = test2(1, 100000, 0);
-        test2(1, 100000, t);
-        test2(1, 100000, t);
+        t = test2(1, 2000000, 0);
+        test2(1, 2000000, t);
+        test2(1, 2000000, t);
         System.out.println();
         t = test3(1, 10000000, 0);
         test3(1, 10000000, t);
@@ -348,12 +454,12 @@ public class ReflectionTest
         test1(32, 20000, t);
         test1(128, 20000, t);
         System.out.println();
-        t = test2(1, 100000, 0);
-        test2(2, 100000, t);
-        test2(4, 100000, t);
-        test2(8, 100000, t);
-        test2(32, 100000, t);
-        test2(128, 100000, t);
+        t = test2(1, 2000000, 0);
+        test2(2, 2000000, t);
+        test2(4, 2000000, t);
+        test2(8, 2000000, t);
+        test2(32, 2000000, t);
+        test2(128, 2000000, t);
         System.out.println();
         t = test3(1, 10000000, 0);
         test3(2, 10000000, t);
