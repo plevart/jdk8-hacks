@@ -10,16 +10,26 @@ if [ "$JAVA_HOME" == "" ]; then
     exit 1
 fi
 
-OPTS="-Xmx4G -cp target/classes"
+if [ -f "$JAVA_HOME/bin/sparcv9/java" ]; then
+    JAVA_BIN="$JAVA_HOME/bin/sparcv9/java"
+else
+    JAVA_BIN="$JAVA_HOME/bin/java"
+fi
+
+if [ "$CP" == "" ]; then
+    CP=target/classes
+fi
+
+OPTS="-Xmx4G -cp $CP"
 
 echo ""
-echo "Executing: $JAVA_HOME/bin/java $OPTS $*"
+echo "Executing: $JAVA_BIN $OPTS $*"
 echo ""
-$JAVA_HOME/bin/java $OPTS $*
+$JAVA_BIN $OPTS $*
 
-OPTS="-Xbootclasspath/p:target/classes $OPTS"
+OPTS="-Xbootclasspath/p:$CP $OPTS"
 
 echo ""
-echo "Executing: $JAVA_HOME/bin/java $OPTS $*"
+echo "Executing: $JAVA_BIN $OPTS $*"
 echo ""
-$JAVA_HOME/bin/java $OPTS $*
+$JAVA_BIN $OPTS $*
