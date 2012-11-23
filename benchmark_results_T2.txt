@@ -1,3 +1,5 @@
+Sun Blade T6320 (one socket T2, 8 cores), Solaris 10 64bit
+
 Executing: /app/jdk1.8.0/bin/sparcv9/java -Xmx4G -cp jdk8-hacks-1.0-SNAPSHOT.jar test.ReflectionTest
 
 

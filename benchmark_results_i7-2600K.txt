@@ -1,3 +1,5 @@
+Desktop PC (one socket i7-2600K, 4 cores), Linux 3.6 64bit
+
 Executing: /home/peter/Apps64/jdk1.8.0-jdk8/bin/java -Xmx4G -cp target/classes test.ReflectionTest
 
 
