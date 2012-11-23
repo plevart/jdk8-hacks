@@ -12,11 +12,14 @@ fi
 
 OPTS="-Xmx4G -cp target/classes"
 
-if [ "$1" == "b" ]; then
-  shift
-  OPTS="-Xbootclasspath/p:target/classes $OPTS"
-fi
-
+echo ""
 echo "Executing: $JAVA_HOME/bin/java $OPTS $*"
+echo ""
+$JAVA_HOME/bin/java $OPTS $*
 
+OPTS="-Xbootclasspath/p:target/classes $OPTS"
+
+echo ""
+echo "Executing: $JAVA_HOME/bin/java $OPTS $*"
+echo ""
 $JAVA_HOME/bin/java $OPTS $*

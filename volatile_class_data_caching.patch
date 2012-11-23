@@ -1,6 +1,6 @@
-diff -r 7ac292e57b5a src/share/classes/java/lang/Class.java
---- a/src/share/classes/java/lang/Class.java	Thu Nov 01 14:12:21 2012 -0700
-+++ b/src/share/classes/java/lang/Class.java	Tue Nov 06 16:08:50 2012 +0100
+diff -r c87df8b1f55e src/share/classes/java/lang/Class.java
+--- a/src/share/classes/java/lang/Class.java	Thu Nov 15 15:40:03 2012 -0800
++++ b/src/share/classes/java/lang/Class.java	Fri Nov 23 12:10:41 2012 +0100
 @@ -2212,39 +2212,72 @@
  
      // Caches for certain reflective results
@@ -28,7 +28,7 @@ diff -r 7ac292e57b5a src/share/classes/java/lang/Class.java
 +        volatile Method[] declaredPublicMethods;
 +        // Annotations
 +        volatile Map<Class<? extends Annotation>, Annotation> annotations;
-+        volatile Map<Class<? extends Annotation>, Annotation> declaredAnnotations;
++        volatile Annotation[] declaredAnnotations;
 +        // Value of classRedefinedCount when we created this VolatileData instance
 +        final int redefinedCount;
 +
@@ -272,23 +272,28 @@ diff -r 7ac292e57b5a src/share/classes/java/lang/Class.java
          String internedName = name.intern();
          for (int i = 0; i < fields.length; i++) {
              if (fields[i].getName() == internedName) {
-@@ -3049,8 +3054,7 @@
+@@ -3044,13 +3049,11 @@
+      * @throws NullPointerException {@inheritDoc}
+      * @since 1.5
+      */
+-    @SuppressWarnings("unchecked")
+     public <A extends Annotation> A getAnnotation(Class<A> annotationClass) {
          if (annotationClass == null)
              throw new NullPointerException();
  
 -        initAnnotationsIfNecessary();
 -        return (A) annotations.get(annotationClass);
-+        return (A) privateGetAnnotations(false).get(annotationClass);
++        return annotationClass.cast(privateGetAnnotations().get(annotationClass));
      }
  
      /**
-@@ -3070,41 +3074,47 @@
+@@ -3070,41 +3073,63 @@
       * @since 1.5
       */
      public Annotation[] getAnnotations() {
 -        initAnnotationsIfNecessary();
 -        return AnnotationParser.toArray(annotations);
-+        return AnnotationParser.toArray(privateGetAnnotations(false));
++        return AnnotationParser.toArray(privateGetAnnotations());
      }
  
      /**
@@ -297,56 +302,80 @@ diff -r 7ac292e57b5a src/share/classes/java/lang/Class.java
      public Annotation[] getDeclaredAnnotations()  {
 -        initAnnotationsIfNecessary();
 -        return AnnotationParser.toArray(declaredAnnotations);
-+        return AnnotationParser.toArray(privateGetAnnotations(true));
++        return privateGetDeclaredAnnotations(volatileData()).clone();
      }
  
 -    // Annotations cache
 -    private transient Map<Class<? extends Annotation>, Annotation> annotations;
 -    private transient Map<Class<? extends Annotation>, Annotation> declaredAnnotations;
++    private Annotation[] privateGetDeclaredAnnotations(VolatileData<T> vd) {
++        Annotation[] declaredAnnotations;
++        if (vd != null) {
++            declaredAnnotations = vd.declaredAnnotations;
++            if (declaredAnnotations != null) return declaredAnnotations;
++        }
  
 -    private synchronized void initAnnotationsIfNecessary() {
 -        clearCachesOnClassRedefinition();
 -        if (annotations != null)
 -            return;
 -        declaredAnnotations = AnnotationParser.parseAnnotations(
-+    private Map<Class<? extends Annotation>, Annotation> privateGetAnnotations(boolean declaredOnly) {
-+        Map<Class<? extends Annotation>, Annotation> res;
-+        VolatileData<T> vd = volatileData();
-+        if (vd != null) {
-+            res = declaredOnly ? vd.declaredAnnotations : vd.annotations;
-+            if (res != null) return res;
-+        }
-+
-+        Map<Class<? extends Annotation>, Annotation> declaredAnnotations = AnnotationParser.parseAnnotations(
-             getRawAnnotations(), getConstantPool(), this);
-+        Map<Class<? extends Annotation>, Annotation> annotations;
-         Class<?> superClass = getSuperclass();
-         if (superClass == null) {
-             annotations = declaredAnnotations;
-         } else {
-             annotations = new HashMap<>();
--            superClass.initAnnotationsIfNecessary();
--            for (Map.Entry<Class<? extends Annotation>, Annotation> e : superClass.annotations.entrySet()) {
-+            for (Map.Entry<Class<? extends Annotation>, Annotation> e : superClass.privateGetAnnotations(false).entrySet()) {
-                 Class<? extends Annotation> annotationClass = e.getKey();
-                 if (AnnotationType.getInstance(annotationClass).isInherited())
-                     annotations.put(annotationClass, e.getValue());
-             }
-             annotations.putAll(declaredAnnotations);
-         }
+-            getRawAnnotations(), getConstantPool(), this);
++        Map<Class<? extends Annotation>, Annotation> declaredAnnotationsMap = AnnotationParser.parseAnnotations(
++            getRawAnnotations(), getConstantPool(), this
++        );
++        declaredAnnotations = AnnotationParser.toArray(declaredAnnotationsMap);
 +
 +        if (vd != null) {
-+            vd.annotations = annotations;
 +            vd.declaredAnnotations = declaredAnnotations;
 +        }
 +
-+        return declaredOnly ? declaredAnnotations : annotations;
++        return declaredAnnotations;
++    }
++
++    private Map<Class<? extends Annotation>, Annotation> privateGetAnnotations() {
++        Map<Class<? extends Annotation>, Annotation> annotations;
++        VolatileData<T> vd = volatileData();
++        if (vd != null) {
++            annotations = vd.annotations;
++            if (annotations != null) return annotations;
++        }
++
++        annotations = new HashMap<>();
+         Class<?> superClass = getSuperclass();
+-        if (superClass == null) {
+-            annotations = declaredAnnotations;
+-        } else {
+-            annotations = new HashMap<>();
+-            superClass.initAnnotationsIfNecessary();
+-            for (Map.Entry<Class<? extends Annotation>, Annotation> e : superClass.annotations.entrySet()) {
+-                Class<? extends Annotation> annotationClass = e.getKey();
++        // fill-in inherited
++        if (superClass != null) {
++            for (Map.Entry<Class<? extends Annotation>, Annotation> entry : superClass.privateGetAnnotations().entrySet()) {
++                Class<? extends Annotation> annotationClass = entry.getKey();
+                 if (AnnotationType.getInstance(annotationClass).isInherited())
+-                    annotations.put(annotationClass, e.getValue());
++                    annotations.put(annotationClass, entry.getValue());
+             }
+-            annotations.putAll(declaredAnnotations);
+         }
++        // override with declared
++        for (Annotation ann : privateGetDeclaredAnnotations(vd)) {
++            annotations.put(ann.annotationType(), ann);
++        }
++
++        if (vd != null) {
++            vd.annotations = annotations;
++        }
++
++        return annotations;
      }
  
      // Annotation types cache their internal (AnnotationType) form
-diff -r 7ac292e57b5a src/share/classes/java/lang/reflect/Constructor.java
---- a/src/share/classes/java/lang/reflect/Constructor.java	Thu Nov 01 14:12:21 2012 -0700
-+++ b/src/share/classes/java/lang/reflect/Constructor.java	Tue Nov 06 16:08:50 2012 +0100
+diff -r c87df8b1f55e src/share/classes/java/lang/reflect/Constructor.java
+--- a/src/share/classes/java/lang/reflect/Constructor.java	Thu Nov 15 15:40:03 2012 -0800
++++ b/src/share/classes/java/lang/reflect/Constructor.java	Fri Nov 23 12:10:41 2012 +0100
 @@ -482,7 +482,10 @@
       * @since 1.5
       */
@@ -359,9 +388,9 @@ diff -r 7ac292e57b5a src/share/classes/java/lang/reflect/Constructor.java
      }
  
      /**
-diff -r 7ac292e57b5a src/share/classes/java/lang/reflect/Executable.java
---- a/src/share/classes/java/lang/reflect/Executable.java	Thu Nov 01 14:12:21 2012 -0700
-+++ b/src/share/classes/java/lang/reflect/Executable.java	Tue Nov 06 16:08:50 2012 +0100
+diff -r c87df8b1f55e src/share/classes/java/lang/reflect/Executable.java
+--- a/src/share/classes/java/lang/reflect/Executable.java	Thu Nov 15 15:40:03 2012 -0800
++++ b/src/share/classes/java/lang/reflect/Executable.java	Fri Nov 23 12:10:41 2012 +0100
 @@ -378,11 +378,12 @@
          return AnnotationParser.toArray(declaredAnnotations());
      }
@@ -378,9 +407,18 @@ diff -r 7ac292e57b5a src/share/classes/java/lang/reflect/Executable.java
                  getAnnotationBytes(),
                  sun.misc.SharedSecrets.getJavaLangAccess().
                  getConstantPool(getDeclaringClass()),
-diff -r 7ac292e57b5a src/share/classes/java/lang/reflect/Field.java
---- a/src/share/classes/java/lang/reflect/Field.java	Thu Nov 01 14:12:21 2012 -0700
-+++ b/src/share/classes/java/lang/reflect/Field.java	Tue Nov 06 16:08:50 2012 +0100
+diff -r c87df8b1f55e src/share/classes/java/lang/reflect/Field.java
+--- a/src/share/classes/java/lang/reflect/Field.java	Thu Nov 15 15:40:03 2012 -0800
++++ b/src/share/classes/java/lang/reflect/Field.java	Fri Nov 23 12:10:41 2012 +0100
+@@ -997,7 +997,7 @@
+                     dimensions++;
+                     cl = cl.getComponentType();
+                 }
+-                StringBuffer sb = new StringBuffer();
++                StringBuilder sb = new StringBuilder(cl.getName().length() + dimensions + dimensions);
+                 sb.append(cl.getName());
+                 for (int i = 0; i < dimensions; i++) {
+                     sb.append("[]");
 @@ -1027,11 +1027,15 @@
          return AnnotationParser.toArray(declaredAnnotations());
      }
@@ -400,9 +438,9 @@ diff -r 7ac292e57b5a src/share/classes/java/lang/reflect/Field.java
                  annotations, sun.misc.SharedSecrets.getJavaLangAccess().
                  getConstantPool(getDeclaringClass()),
                  getDeclaringClass());
-diff -r 7ac292e57b5a src/share/classes/java/lang/reflect/Method.java
---- a/src/share/classes/java/lang/reflect/Method.java	Thu Nov 01 14:12:21 2012 -0700
-+++ b/src/share/classes/java/lang/reflect/Method.java	Tue Nov 06 16:08:50 2012 +0100
+diff -r c87df8b1f55e src/share/classes/java/lang/reflect/Method.java
+--- a/src/share/classes/java/lang/reflect/Method.java	Thu Nov 15 15:40:03 2012 -0800
++++ b/src/share/classes/java/lang/reflect/Method.java	Fri Nov 23 12:10:41 2012 +0100
 @@ -583,7 +583,10 @@
       * @since 1.5
       */
