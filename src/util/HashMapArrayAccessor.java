@@ -13,7 +13,7 @@ public class HashMapArrayAccessor extends AbstractMapArrayAccessor {
 
     @Override
     public int getArrayLength(Map<?, ?> map) {
-        int length = map.size() * 3;
+        int length = map.size() * 4;
         return (length & 1) == 0 ? length : length + 1;
     }
 
@@ -67,13 +67,13 @@ public class HashMapArrayAccessor extends AbstractMapArrayAccessor {
     }
 
     @Override
-    protected int indexOf(Object[] array, int offset, int length, Object key) {
+    protected int indexOf(Object[] array, int offset, int keysLength, Object key) {
 
-        int h = hash(key) % length;
+        int h = hash(key) % keysLength;
         int dh;
-        for (dh = 0; dh < length; dh++) {
+        for (dh = 0; dh < keysLength; dh++) {
             int hi = h + dh;
-            if (hi >= length) hi -= length;
+            if (hi >= keysLength) hi -= keysLength;
             int i = offset + hi;
             Object value = array[i];
             if (value == null) break; // found gap - no match

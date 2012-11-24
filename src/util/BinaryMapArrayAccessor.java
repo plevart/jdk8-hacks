@@ -52,9 +52,9 @@ public class BinaryMapArrayAccessor extends AbstractMapArrayAccessor {
     }
 
     @Override
-    protected int indexOf(Object[] array, int offset, int length, Object key) {
+    protected int indexOf(Object[] array, int offset, int keysLength, Object key) {
 
-        int toIndex = offset + length;
+        int toIndex = offset + keysLength;
         int hash = hash(key);
         int low = offset;
         int high = toIndex - 1;

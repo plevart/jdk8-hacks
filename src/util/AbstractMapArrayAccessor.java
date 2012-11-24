@@ -35,16 +35,16 @@ public abstract class AbstractMapArrayAccessor implements MapArrayAccessor {
     }
 
     /**
-     * Perform a search in the given {@code array} sub-range starting at {@code offset} with length {@code length}
+     * Perform a search in the given {@code array} sub-range starting at {@code offset} with length {@code keysLength}
      * for the location of an element that is equal to the given {@code key}. If such element is found, return index of it; otherwise -1
      *
      * @param array  the array to be searched
      * @param offset the start offset of the array sub-range to be searched
-     * @param length the length of array sub-range to be searched
+     * @param keysLength the length of array sub-range to be searched
      * @param key    the value to be searched for
      * @return index of the found key or -1 if not found
      */
-    protected abstract int indexOf(Object[] array, int offset, int length, Object key);
+    protected abstract int indexOf(Object[] array, int offset, int keysLength, Object key);
 
     protected static int halfLength(int length) {
         if (length < 0) throw new IllegalArgumentException("length " + length + " should be non-negative");

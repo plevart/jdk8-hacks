@@ -67,7 +67,6 @@ public class SoftCache<K extends Enum<K>, V> extends SoftReference<V[]> {
      * @return {@code true} if this instance contains no mappings (or has been cleared)
      */
     public boolean isEmpty() {
-        V[] allValues = super.get();
         if (offsets == null || super.get() == null) return true; // fresh empty or cleared instance
         for(int i = 0; i < offsets.length; i++)
             if (offsets[i] >= 0) return false; // contains a mapping
@@ -244,7 +243,13 @@ public class SoftCache<K extends Enum<K>, V> extends SoftReference<V[]> {
         Map<K, List<V>> map = toMap(keyType);
         out.println("    map: " + map);
         out.println(" values: " + Arrays.toString(super.get()));
-        out.println("offsets: " + Arrays.toString(offsets));
+        String[] offsetStrings = offsets == null ? null : new String[offsets.length];
+        if (offsets != null) {
+            for (int i = 0; i < offsets.length; i++) {
+                offsetStrings[i] = offsets[i] < 0 ? "~" + (offsets[i] & Integer.MAX_VALUE) : String.valueOf(offsets[i]);
+            }
+        }
+        out.println("offsets: " + Arrays.toString(offsetStrings));
         out.println();
     }
 

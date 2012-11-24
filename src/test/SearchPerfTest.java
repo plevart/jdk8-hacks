@@ -1,11 +1,11 @@
 package test;
 
-import util.BinaryMapArrayAccessor;
 import util.MapArrayAccessor;
 import util.Mapper;
 
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Retention;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -197,6 +197,10 @@ public class SearchPerfTest {
             for (Class<?> annotationType : annotationTypes)
             {
                 Annotation foundAnn = MapArrayAccessor.HASH4.get(hashArray4, annotationType);
+                if (foundAnn == null)
+                {
+                    System.out.println("Can't find " + annotationType.getName() + " in: " + Arrays.toString(hashArray4));
+                }
                 Objects.requireNonNull(foundAnn);
             }
         }
