@@ -60,9 +60,9 @@ public class AnnotationParser {
      *         malformed.
      */
     public static Map<Class<? extends Annotation>, Annotation> parseAnnotations(
-        byte[] rawAnnotations,
-        ConstantPool constPool,
-        Class<?> container) {
+                byte[] rawAnnotations,
+                ConstantPool constPool,
+                Class<?> container) {
         if (rawAnnotations == null)
             return Collections.emptyMap();
 
@@ -77,9 +77,9 @@ public class AnnotationParser {
     }
 
     private static Map<Class<? extends Annotation>, Annotation> parseAnnotations2(
-        byte[] rawAnnotations,
-        ConstantPool constPool,
-        Class<?> container) {
+                byte[] rawAnnotations,
+                ConstantPool constPool,
+                Class<?> container) {
         Map<Class<? extends Annotation>, Annotation> result =
             new LinkedHashMap<Class<? extends Annotation>, Annotation>();
         ByteBuffer buf = ByteBuffer.wrap(rawAnnotations);
@@ -122,9 +122,9 @@ public class AnnotationParser {
      *         malformed.
      */
     public static Annotation[][] parseParameterAnnotations(
-        byte[] rawAnnotations,
-        ConstantPool constPool,
-        Class<?> container) {
+                    byte[] rawAnnotations,
+                    ConstantPool constPool,
+                    Class<?> container) {
         try {
             return parseParameterAnnotations2(rawAnnotations, constPool, container);
         } catch(BufferUnderflowException e) {
@@ -137,9 +137,9 @@ public class AnnotationParser {
     }
 
     private static Annotation[][] parseParameterAnnotations2(
-        byte[] rawAnnotations,
-        ConstantPool constPool,
-        Class<?> container) {
+                    byte[] rawAnnotations,
+                    ConstantPool constPool,
+                    Class<?> container) {
         ByteBuffer buf = ByteBuffer.wrap(rawAnnotations);
         int numParameters = buf.get() & 0xFF;
         Annotation[][] result = new Annotation[numParameters][];
@@ -152,7 +152,7 @@ public class AnnotationParser {
                 Annotation a = parseAnnotation(buf, constPool, container, false);
                 if (a != null) {
                     AnnotationType type = AnnotationType.getInstance(
-                        a.annotationType());
+                                              a.annotationType());
                     if (type.retention() == RetentionPolicy.RUNTIME)
                         annotations.add(a);
                 }
@@ -163,7 +163,7 @@ public class AnnotationParser {
     }
 
     private static final Annotation[] EMPTY_ANNOTATIONS_ARRAY =
-        new Annotation[0];
+                    new Annotation[0];
 
     /**
      * Parses the annotation at the current position in the specified
@@ -227,7 +227,7 @@ public class AnnotationParser {
 
         Map<String, Class<?>> memberTypes = type.memberTypes();
         Map<String, Object> memberValues =
-            new HashMap<String, Object>(type.memberDefaults());
+            new LinkedHashMap<String, Object>(type.memberDefaults());
 
         int numMembers = buf.getShort() & 0xFFFF;
         for (int i = 0; i < numMembers; i++) {
@@ -296,18 +296,18 @@ public class AnnotationParser {
         Object result = null;
         int tag = buf.get();
         switch(tag) {
-            case 'e':
-                return parseEnumValue((Class<? extends Enum<?>>)memberType, buf, constPool, container);
-            case 'c':
-                result = parseClassValue(buf, constPool, container);
-                break;
-            case '@':
-                result = parseAnnotation(buf, constPool, container, true);
-                break;
-            case '[':
-                return parseArray(memberType, buf, constPool, container);
-            default:
-                result = parseConst(tag, buf, constPool);
+          case 'e':
+              return parseEnumValue((Class<? extends Enum<?>>)memberType, buf, constPool, container);
+          case 'c':
+              result = parseClassValue(buf, constPool, container);
+              break;
+          case '@':
+              result = parseAnnotation(buf, constPool, container, true);
+              break;
+          case '[':
+              return parseArray(memberType, buf, constPool, container);
+          default:
+              result = parseConst(tag, buf, constPool);
         }
 
         if (!(result instanceof ExceptionProxy) &&
@@ -331,27 +331,27 @@ public class AnnotationParser {
                                      ByteBuffer buf, ConstantPool constPool) {
         int constIndex = buf.getShort() & 0xFFFF;
         switch(tag) {
-            case 'B':
-                return Byte.valueOf((byte) constPool.getIntAt(constIndex));
-            case 'C':
-                return Character.valueOf((char) constPool.getIntAt(constIndex));
-            case 'D':
-                return Double.valueOf(constPool.getDoubleAt(constIndex));
-            case 'F':
-                return Float.valueOf(constPool.getFloatAt(constIndex));
-            case 'I':
-                return Integer.valueOf(constPool.getIntAt(constIndex));
-            case 'J':
-                return Long.valueOf(constPool.getLongAt(constIndex));
-            case 'S':
-                return Short.valueOf((short) constPool.getIntAt(constIndex));
-            case 'Z':
-                return Boolean.valueOf(constPool.getIntAt(constIndex) != 0);
-            case 's':
-                return constPool.getUTF8At(constIndex);
-            default:
-                throw new AnnotationFormatError(
-                    "Invalid member-value tag in annotation: " + tag);
+          case 'B':
+            return Byte.valueOf((byte) constPool.getIntAt(constIndex));
+          case 'C':
+            return Character.valueOf((char) constPool.getIntAt(constIndex));
+          case 'D':
+            return Double.valueOf(constPool.getDoubleAt(constIndex));
+          case 'F':
+            return Float.valueOf(constPool.getFloatAt(constIndex));
+          case 'I':
+            return Integer.valueOf(constPool.getIntAt(constIndex));
+          case 'J':
+            return Long.valueOf(constPool.getLongAt(constIndex));
+          case 'S':
+            return Short.valueOf((short) constPool.getIntAt(constIndex));
+          case 'Z':
+            return Boolean.valueOf(constPool.getIntAt(constIndex) != 0);
+          case 's':
+            return constPool.getUTF8At(constIndex);
+          default:
+            throw new AnnotationFormatError(
+                "Invalid member-value tag in annotation: " + tag);
         }
     }
 
@@ -396,7 +396,7 @@ public class AnnotationParser {
     static Class<?> toClass(Type o) {
         if (o instanceof GenericArrayType)
             return Array.newInstance(toClass(((GenericArrayType)o).getGenericComponentType()),
-                0)
+                                     0)
                 .getClass();
         return (Class)o;
     }
@@ -425,8 +425,8 @@ public class AnnotationParser {
         if (!typeName.endsWith(";")) {
             // support now-obsolete early jsr175-format class files.
             if (!enumType.getName().equals(typeName))
-                return new AnnotationTypeMismatchExceptionProxy(
-                    typeName + "." + constName);
+            return new AnnotationTypeMismatchExceptionProxy(
+                typeName + "." + constName);
         } else if (enumType != parseSig(typeName, container)) {
             return new AnnotationTypeMismatchExceptionProxy(
                 typeName + "." + constName);
@@ -484,16 +484,16 @@ public class AnnotationParser {
             return parseClassArray(length, buf, constPool, container);
         } else if (componentType.isEnum()) {
             return parseEnumArray(length, (Class<? extends Enum<?>>)componentType, buf,
-                constPool, container);
+                                  constPool, container);
         } else {
             assert componentType.isAnnotation();
             return parseAnnotationArray(length, (Class <? extends Annotation>)componentType, buf,
-                constPool, container);
+                                        constPool, container);
         }
     }
 
     private static Object parseByteArray(int length,
-                                         ByteBuffer buf, ConstantPool constPool) {
+                                  ByteBuffer buf, ConstantPool constPool) {
         byte[] result = new byte[length];
         boolean typeMismatch = false;
         int tag = 0;
@@ -512,7 +512,7 @@ public class AnnotationParser {
     }
 
     private static Object parseCharArray(int length,
-                                         ByteBuffer buf, ConstantPool constPool) {
+                                  ByteBuffer buf, ConstantPool constPool) {
         char[] result = new char[length];
         boolean typeMismatch = false;
         byte tag = 0;
@@ -531,7 +531,7 @@ public class AnnotationParser {
     }
 
     private static Object parseDoubleArray(int length,
-                                           ByteBuffer buf, ConstantPool constPool) {
+                                    ByteBuffer buf, ConstantPool constPool) {
         double[] result = new  double[length];
         boolean typeMismatch = false;
         int tag = 0;
@@ -550,7 +550,7 @@ public class AnnotationParser {
     }
 
     private static Object parseFloatArray(int length,
-                                          ByteBuffer buf, ConstantPool constPool) {
+                                   ByteBuffer buf, ConstantPool constPool) {
         float[] result = new float[length];
         boolean typeMismatch = false;
         int tag = 0;
@@ -569,7 +569,7 @@ public class AnnotationParser {
     }
 
     private static Object parseIntArray(int length,
-                                        ByteBuffer buf, ConstantPool constPool) {
+                                 ByteBuffer buf, ConstantPool constPool) {
         int[] result = new  int[length];
         boolean typeMismatch = false;
         int tag = 0;
@@ -588,7 +588,7 @@ public class AnnotationParser {
     }
 
     private static Object parseLongArray(int length,
-                                         ByteBuffer buf, ConstantPool constPool) {
+                                  ByteBuffer buf, ConstantPool constPool) {
         long[] result = new long[length];
         boolean typeMismatch = false;
         int tag = 0;
@@ -607,7 +607,7 @@ public class AnnotationParser {
     }
 
     private static Object parseShortArray(int length,
-                                          ByteBuffer buf, ConstantPool constPool) {
+                                   ByteBuffer buf, ConstantPool constPool) {
         short[] result = new short[length];
         boolean typeMismatch = false;
         int tag = 0;
@@ -626,7 +626,7 @@ public class AnnotationParser {
     }
 
     private static Object parseBooleanArray(int length,
-                                            ByteBuffer buf, ConstantPool constPool) {
+                                     ByteBuffer buf, ConstantPool constPool) {
         boolean[] result = new boolean[length];
         boolean typeMismatch = false;
         int tag = 0;
@@ -645,7 +645,7 @@ public class AnnotationParser {
     }
 
     private static Object parseStringArray(int length,
-                                           ByteBuffer buf,  ConstantPool constPool) {
+                                    ByteBuffer buf,  ConstantPool constPool) {
         String[] result = new String[length];
         boolean typeMismatch = false;
         int tag = 0;
@@ -769,18 +769,18 @@ public class AnnotationParser {
      */
     private static void skipMemberValue(int tag, ByteBuffer buf) {
         switch(tag) {
-            case 'e': // Enum value
-                buf.getInt();  // (Two shorts, actually.)
-                break;
-            case '@':
-                skipAnnotation(buf, true);
-                break;
-            case '[':
-                skipArray(buf);
-                break;
-            default:
-                // Class, primitive, or String
-                buf.getShort();
+          case 'e': // Enum value
+            buf.getInt();  // (Two shorts, actually.)
+            break;
+          case '@':
+            skipAnnotation(buf, true);
+            break;
+          case '[':
+            skipArray(buf);
+            break;
+          default:
+            // Class, primitive, or String
+            buf.getShort();
         }
     }
 
