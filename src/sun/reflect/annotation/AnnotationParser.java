@@ -227,7 +227,7 @@ public class AnnotationParser {
 
         Map<String, Class<?>> memberTypes = type.memberTypes();
         Map<String, Object> memberValues =
-            new LinkedHashMap<String, Object>(type.memberDefaults());
+            new HashMap<String, Object>(type.memberDefaults());
 
         int numMembers = buf.getShort() & 0xFFFF;
         for (int i = 0; i < numMembers; i++) {
