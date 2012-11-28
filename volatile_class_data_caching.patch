@@ -1,6 +1,6 @@
 diff -r c87df8b1f55e src/share/classes/java/lang/Class.java
 --- a/src/share/classes/java/lang/Class.java	Thu Nov 15 15:40:03 2012 -0800
-+++ b/src/share/classes/java/lang/Class.java	Fri Nov 23 12:10:41 2012 +0100
++++ b/src/share/classes/java/lang/Class.java	Wed Nov 28 22:42:55 2012 +0100
 @@ -2212,39 +2212,72 @@
  
      // Caches for certain reflective results
@@ -375,8 +375,20 @@ diff -r c87df8b1f55e src/share/classes/java/lang/Class.java
      // Annotation types cache their internal (AnnotationType) form
 diff -r c87df8b1f55e src/share/classes/java/lang/reflect/Constructor.java
 --- a/src/share/classes/java/lang/reflect/Constructor.java	Thu Nov 15 15:40:03 2012 -0800
-+++ b/src/share/classes/java/lang/reflect/Constructor.java	Fri Nov 23 12:10:41 2012 +0100
-@@ -482,7 +482,10 @@
++++ b/src/share/classes/java/lang/reflect/Constructor.java	Wed Nov 28 22:42:55 2012 +0100
+@@ -474,7 +474,10 @@
+      * @since 1.5
+      */
+     public <T extends Annotation> T getAnnotation(Class<T> annotationClass) {
+-        return super.getAnnotation(annotationClass);
++        if (root != null)
++            return root.getAnnotation(annotationClass);
++        else
++            return super.getAnnotation(annotationClass);
+     }
+ 
+     /**
+@@ -482,7 +485,10 @@
       * @since 1.5
       */
      public Annotation[] getDeclaredAnnotations()  {
@@ -390,7 +402,7 @@ diff -r c87df8b1f55e src/share/classes/java/lang/reflect/Constructor.java
      /**
 diff -r c87df8b1f55e src/share/classes/java/lang/reflect/Executable.java
 --- a/src/share/classes/java/lang/reflect/Executable.java	Thu Nov 15 15:40:03 2012 -0800
-+++ b/src/share/classes/java/lang/reflect/Executable.java	Fri Nov 23 12:10:41 2012 +0100
++++ b/src/share/classes/java/lang/reflect/Executable.java	Wed Nov 28 22:42:55 2012 +0100
 @@ -378,11 +378,12 @@
          return AnnotationParser.toArray(declaredAnnotations());
      }
@@ -409,7 +421,7 @@ diff -r c87df8b1f55e src/share/classes/java/lang/reflect/Executable.java
                  getConstantPool(getDeclaringClass()),
 diff -r c87df8b1f55e src/share/classes/java/lang/reflect/Field.java
 --- a/src/share/classes/java/lang/reflect/Field.java	Thu Nov 15 15:40:03 2012 -0800
-+++ b/src/share/classes/java/lang/reflect/Field.java	Fri Nov 23 12:10:41 2012 +0100
++++ b/src/share/classes/java/lang/reflect/Field.java	Wed Nov 28 22:42:55 2012 +0100
 @@ -997,7 +997,7 @@
                      dimensions++;
                      cl = cl.getComponentType();
@@ -440,8 +452,20 @@ diff -r c87df8b1f55e src/share/classes/java/lang/reflect/Field.java
                  getDeclaringClass());
 diff -r c87df8b1f55e src/share/classes/java/lang/reflect/Method.java
 --- a/src/share/classes/java/lang/reflect/Method.java	Thu Nov 15 15:40:03 2012 -0800
-+++ b/src/share/classes/java/lang/reflect/Method.java	Fri Nov 23 12:10:41 2012 +0100
-@@ -583,7 +583,10 @@
++++ b/src/share/classes/java/lang/reflect/Method.java	Wed Nov 28 22:42:55 2012 +0100
+@@ -575,7 +575,10 @@
+      * @since 1.5
+      */
+     public <T extends Annotation> T getAnnotation(Class<T> annotationClass) {
+-        return super.getAnnotation(annotationClass);
++        if (root != null)
++            return root.getAnnotation(annotationClass);
++        else
++            return super.getAnnotation(annotationClass);
+     }
+ 
+     /**
+@@ -583,7 +586,10 @@
       * @since 1.5
       */
      public Annotation[] getDeclaredAnnotations()  {
